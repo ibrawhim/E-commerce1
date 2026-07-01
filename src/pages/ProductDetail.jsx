@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import "./ProductDetail.css";
-import { getTheme } from "./Categorythemes";
+import { getTheme } from "./categoryThemes";
 import { useCart } from "../context/CartContext";
 
 function calcOriginalPrice(price, disc) {
