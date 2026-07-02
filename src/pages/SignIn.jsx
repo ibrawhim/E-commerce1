@@ -1,8 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
+import { api } from "../config/api.js";
 import "./Auth.css";
-
-const BASE_URL = "https://enaijacommerce.onrender.com";
 
 export default function SignIn() {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -20,7 +18,7 @@ export default function SignIn() {
     setLoading(true);
     setError("");
     try {
-      const response = await axios.post(`${BASE_URL}/signin`, formData);
+      const response = await api.post("/signin", formData);
       console.log("Sign In response:", response.data);
     } catch (err) {
       const message = err.response?.data?.message || err.response?.data?.error || err.message || "Sign in failed";

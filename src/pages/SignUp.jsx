@@ -1,8 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
+import { api } from "../config/api.js";
 import "./Auth.css";
-
-const BASE_URL = "https://enaijacommerce.onrender.com";
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -27,7 +25,7 @@ export default function SignUp() {
     setError("");
     setSuccess(false);
     try {
-      const response = await axios.post(`${BASE_URL}/signup`, formData);
+      const response = await api.post("/signup", formData);
       console.log("Sign Up response:", response.data);
       setSuccess(true);
     } catch (err) {
