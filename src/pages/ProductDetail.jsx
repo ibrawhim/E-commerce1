@@ -3,6 +3,8 @@ import axios from "axios";
 import "./ProductDetail.css";
 import { getTheme } from "./categoryThemes";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import { api } from "../config/api.js";
 
 function calcOriginalPrice(price, disc) {
   return (price / (1 - disc / 100)).toFixed(2);
@@ -129,19 +131,61 @@ function ReviewCard({ review, theme }) {
 }
 
 export default function ProductDetail({ productId, onBack, onProductSelect, initialBg }) {
-  const { addToCart } = useCart();
-  const [product, setProduct] = useState(null);
-  const [related, setRelated] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [activeImg, setActiveImg] = useState(0);
-  const [qty, setQty] = useState(1);
-  const [activeTab, setActiveTab] = useState("description");
-  const [visible, setVisible] = useState(false);
-  const [addedToCart, setAddedToCart] = useState(false);
+  const { addToCart }              = useCart();
+  const { user, isLoggedIn }       = useAuth();
+  const [product, setProduct]      = useState(null);
+  const [related, setRelated]      = useState([]);
+  const [loading, setLoading]      = useState(true);
+  const [error, setError]          = useState(false);
+  const [activeImg, setActiveImg]  = useState(0);
+  const [qty, setQty]              = useState(1);
+  const [activeTab, setActiveTab]  = useState("description");
+  const [visible, setVisible]      = useState(false);
+  const [addedToCart, setAddedToCart]   = useState(false);
+  const [cartError, setCartError]       = useState("");
+  const [cartLoading, setCartLoading]   = useState(false);
 
-  function handleAddToCart() {
+  async function handleAddToCart() {
+    setCartError("");
+    setCartLoading(true);
+
     addToCart(product, qty);
+
+    if (isLoggedIn && user?._id) {
+      const userId = user._id;
+      const token  = localStorage.getItem("token");
+
+      const cartItem = {
+        itemId:      String(product.id),
+        description: product.description || "",
+        category:    product.category    || "",
+        brand:       product.brand       || product.category || "",
+        weight:      product.weight      || 0,
+        title:       product.title,
+        price:       product.price,
+        image:       product.thumbnail   || product.images?.[0] || "",
+        quantity:    qty,
+      };
+
+      const payload = { userId, cartItems: [cartItem] };
+      console.log("Adding to cart — payload sent to backend:", payload);
+
+      try {
+        const response = await api.post("/cart/addtocart", payload, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        console.log("Add to cart response:", response.data);
+
+        if (response.data?.status === false) {
+          console.warn("Backend cart warning:", response.data?.message);
+        }
+      } catch (err) {
+        console.error("Add to cart backend error:", err.response?.data || err.message);
+        setCartError(err.response?.data?.message || "Could not sync cart with server.");
+      }
+    }
+
+    setCartLoading(false);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 1500);
   }
@@ -388,11 +432,22 @@ export default function ProductDetail({ productId, onBack, onProductSelect, init
             </div>
             <button
               className="pd-info__cart-btn"
-              style={{ background: addedToCart ? "#6DDC8A" : theme.accent, color: "#fff", transition: "background 0.3s" }}
+              style={{
+                background: addedToCart ? "#1E8A46" : theme.accent,
+                color: "#fff",
+                transition: "background 0.3s",
+                opacity: cartLoading ? 0.7 : 1,
+              }}
               onClick={handleAddToCart}
+              disabled={cartLoading}
             >
-              {addedToCart ? "✓ Added to Cart" : "Add to Cart"}
+              {cartLoading ? "Adding…" : addedToCart ? "✓ Added to Cart" : "Add to Cart"}
             </button>
+            {cartError && (
+              <p style={{ fontSize: "12px", color: "#B91C1C", margin: "4px 0 0", background: "#FEF2F2", padding: "6px 10px", borderRadius: "6px", border: "1px solid #FECACA" }}>
+                {cartError}
+              </p>
+            )}
             <button
               className="pd-info__buy-btn"
               style={{ borderColor: theme.accent, color: theme.accent }}

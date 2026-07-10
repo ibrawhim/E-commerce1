@@ -1,27 +1,67 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../config/api.js";
+import { useAuth } from "../context/AuthContext";
 import "./Auth.css";
 
+function EyeIcon({ open }) {
+  return open ? (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  ) : (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>
+  );
+}
+
 export default function SignIn() {
-  const [formData, setFormData] = useState({ email: "", password: "" });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { login }                       = useAuth();
+  const navigate                        = useNavigate();
+  const [formData, setFormData]         = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState("");
+  const [success, setSuccess]           = useState("");
 
   function handleChange(e) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError("");
+    setSuccess("");
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
     try {
       const response = await api.post("/signin", formData);
       console.log("Sign In response:", response.data);
+
+      if (response.data?.status === false) {
+        const msg = response.data?.message || response.data?.msg || "Sign in failed.";
+        setError(msg);
+      } else {
+        const userData = response.data?.data;
+        const token    = response.data?.token;
+        const msg      = response.data?.message || "Login Successful";
+        login(userData, token);
+        setSuccess(msg);
+        setTimeout(() => navigate("/"), 1200);
+      }
     } catch (err) {
-      const message = err.response?.data?.message || err.response?.data?.error || err.message || "Sign in failed";
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error   ||
+        err.response?.data?.msg     ||
+        err.message                 ||
+        "Sign in failed. Please try again.";
       console.error("Sign In error:", err.response?.data || err.message);
       setError(message);
     } finally {
@@ -37,10 +77,6 @@ export default function SignIn() {
     <div className="auth-root">
       <div className="auth-left">
         <div className="auth-left__inner">
-          <a href="/" className="auth-logo">
-            <span className="auth-logo__mark">B</span>
-            <span className="auth-logo__text">commerce</span>
-          </a>
           <div className="auth-left__body">
             <p className="auth-left__tagline">Welcome back</p>
             <h1 className="auth-left__headline">Sign in to<br />your account</h1>
@@ -99,18 +135,29 @@ export default function SignIn() {
                 <label className="auth-field__label">Password</label>
                 <a href="#" className="auth-field__link">Forgot password?</a>
               </div>
-              <input
-                type="password"
-                name="password"
-                className="auth-field__input"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="auth-field__input-wrap">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  className="auth-field__input auth-field__input--has-icon"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="auth-field__eye"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  <EyeIcon open={showPassword} />
+                </button>
+              </div>
             </div>
 
-            {error && <p className="auth-error">{error}</p>}
+            {error   && <p className="auth-error">{error}</p>}
+            {success && <p className="auth-success">{success}</p>}
 
             <button type="submit" className="auth-submit-btn" disabled={loading}>
               {loading ? "Signing in…" : "Sign In"}

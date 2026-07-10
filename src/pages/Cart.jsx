@@ -1,30 +1,103 @@
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { api } from "../config/api.js";
 import "./Cart.css";
 
 export default function Cart() {
   const { items, removeFromCart, updateQty, subtotal, totalItems } = useCart();
+  const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
-  const [coupon, setCoupon] = useState("");
+
+  const [coupon, setCoupon]             = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
+  const [backendItems, setBackendItems] = useState([]);
+  const [fetchLoading, setFetchLoading] = useState(false);
+  const [fetchError, setFetchError]     = useState("");
 
   useEffect(() => {
-    console.log("Cart items on load:", items);
-  }, []);
+    if (!isLoggedIn) {
+      console.log("Local cart items:", items);
+      return;
+    }
 
-  const shipping  = subtotal > 50 ? 0 : 9.99;
-  const discount  = couponApplied ? subtotal * 0.1 : 0;
-  const tax       = (subtotal - discount) * 0.075;
-  const total     = subtotal - discount + shipping + tax;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setFetchLoading(true);
+    setFetchError("");
+
+    api
+      .get("/cart/", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => {
+        console.log("Backend cart response:", response.data);
+
+        if (response.data?.success === false) {
+          setFetchError(response.data?.message || "Failed to load cart.");
+          return;
+        }
+
+        const raw = response.data?.cart?.cartItems || [];
+
+        const mapped = raw.map((item) => ({
+          id:          item._id,
+          itemId:      item.itemId,
+          title:       item.title,
+          description: item.description,
+          category:    item.category,
+          brand:       item.brand,
+          weight:      item.weight,
+          price:       item.price,
+          thumbnail:   item.image,
+          qty:         item.quantity,
+          sku:         item.itemId,
+          stock:       999,
+        }));
+
+        console.log("Mapped backend cart items:", mapped);
+        setBackendItems(mapped);
+      })
+      .catch((err) => {
+        const msg =
+          err.response?.data?.message ||
+          err.response?.data?.msg     ||
+          err.message                 ||
+          "Could not load cart from server.";
+        console.error("Fetch cart error:", err.response?.data || err.message);
+        setFetchError(msg);
+      })
+      .finally(() => setFetchLoading(false));
+  }, [isLoggedIn]);
+
+  const displayItems = isLoggedIn && backendItems.length > 0 ? backendItems : items;
+
+  const displaySubtotal = displayItems.reduce((s, item) => s + item.price * item.qty, 0);
+  const displayCount    = displayItems.reduce((s, item) => s + item.qty, 0);
+
+  const shipping      = displaySubtotal > 50 ? 0 : 9.99;
+  const discount      = couponApplied ? displaySubtotal * 0.1 : 0;
+  const tax           = (displaySubtotal - discount) * 0.075;
+  const total         = displaySubtotal - discount + shipping + tax;
 
   function handleApplyCoupon() {
-    if (coupon.trim().toLowerCase() === "save10") {
-      setCouponApplied(true);
-    }
+    if (coupon.trim().toLowerCase() === "save10") setCouponApplied(true);
   }
 
-  if (items.length === 0) {
+  if (fetchLoading) {
+    return (
+      <div className="cart-empty">
+        <div className="cart-loading-dots">
+          <span /><span /><span />
+        </div>
+        <p style={{ color: "#7A9A82", fontSize: "13px" }}>Loading your cart…</p>
+      </div>
+    );
+  }
+
+  if (displayItems.length === 0) {
     return (
       <div className="cart-empty">
         <div className="cart-empty__icon">
@@ -36,6 +109,9 @@ export default function Cart() {
         </div>
         <h2 className="cart-empty__title">Your cart is empty</h2>
         <p className="cart-empty__sub">Looks like you haven't added anything yet.</p>
+        {fetchError && (
+          <p className="cart-fetch-error">{fetchError}</p>
+        )}
         <Link to="/" className="cart-empty__btn">Continue Shopping</Link>
       </div>
     );
@@ -47,11 +123,22 @@ export default function Cart() {
         <div className="cart-header__inner">
           <div>
             <h1 className="cart-header__title">My Cart</h1>
-            <p className="cart-header__count">{totalItems} item{totalItems !== 1 ? "s" : ""}</p>
+            <p className="cart-header__count">
+              {displayCount} item{displayCount !== 1 ? "s" : ""}
+              {isLoggedIn && backendItems.length > 0 && (
+                <span className="cart-header__source"> · synced from account</span>
+              )}
+            </p>
           </div>
           <Link to="/" className="cart-header__keep">← Keep Shopping</Link>
         </div>
       </div>
+
+      {fetchError && (
+        <div className="cart-fetch-error-bar">
+          ⚠ {fetchError} — showing local cart instead.
+        </div>
+      )}
 
       <div className="cart-body">
         <div className="cart-items">
@@ -63,13 +150,13 @@ export default function Cart() {
             <span className="cart-col cart-col--del" />
           </div>
 
-          {items.map((item) => {
+          {displayItems.map((item) => {
             const lineTotal = (item.price * item.qty).toFixed(2);
             return (
               <div key={item.id} className="cart-row">
                 <div className="cart-col cart-col--product">
                   <img
-                    src={item.thumbnail}
+                    src={item.thumbnail || item.image}
                     alt={item.title}
                     className="cart-row__img"
                     onClick={() => navigate("/")}
@@ -77,7 +164,7 @@ export default function Cart() {
                   <div className="cart-row__info">
                     <p className="cart-row__brand">{item.brand || item.category}</p>
                     <p className="cart-row__title">{item.title}</p>
-                    <p className="cart-row__sku">SKU: {item.sku || "N/A"}</p>
+                    <p className="cart-row__sku">SKU: {item.sku || item.itemId || "N/A"}</p>
                     {item.stock <= 5 && item.stock > 0 && (
                       <p className="cart-row__low-stock">Only {item.stock} left!</p>
                     )}
@@ -99,7 +186,7 @@ export default function Cart() {
                     <button
                       className="cart-qty__btn"
                       onClick={() => updateQty(item.id, item.qty + 1)}
-                      disabled={item.qty >= item.stock}
+                      disabled={item.qty >= (item.stock || 999)}
                     >+</button>
                   </div>
                 </div>
@@ -111,7 +198,13 @@ export default function Cart() {
                 <div className="cart-col cart-col--del">
                   <button
                     className="cart-row__remove"
-                    onClick={() => removeFromCart(item.id)}
+                    onClick={() => {
+                      if (isLoggedIn && backendItems.length > 0) {
+                        setBackendItems((prev) => prev.filter((i) => i.id !== item.id));
+                      } else {
+                        removeFromCart(item.id);
+                      }
+                    }}
                     aria-label="Remove item"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -128,7 +221,7 @@ export default function Cart() {
 
           <div className="cart-items__footer">
             <span className="cart-items__subtotal-label">Order Subtotal</span>
-            <span className="cart-items__subtotal-val">${subtotal.toFixed(2)}</span>
+            <span className="cart-items__subtotal-val">${displaySubtotal.toFixed(2)}</span>
           </div>
         </div>
 
@@ -138,7 +231,7 @@ export default function Cart() {
           <div className="cart-summary__rows">
             <div className="cart-summary__row">
               <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>${displaySubtotal.toFixed(2)}</span>
             </div>
             {couponApplied && (
               <div className="cart-summary__row cart-summary__row--discount">
@@ -148,7 +241,11 @@ export default function Cart() {
             )}
             <div className="cart-summary__row">
               <span>Shipping</span>
-              <span>{shipping === 0 ? <span className="cart-summary__free">Free</span> : `$${shipping.toFixed(2)}`}</span>
+              <span>
+                {shipping === 0
+                  ? <span className="cart-summary__free">Free</span>
+                  : `$${shipping.toFixed(2)}`}
+              </span>
             </div>
             <div className="cart-summary__row">
               <span>Sales Tax (7.5%)</span>
@@ -158,7 +255,7 @@ export default function Cart() {
 
           {shipping > 0 && (
             <p className="cart-summary__free-msg">
-              Add ${(50 - subtotal).toFixed(2)} more for free shipping
+              Add ${(50 - displaySubtotal).toFixed(2)} more for free shipping
             </p>
           )}
 

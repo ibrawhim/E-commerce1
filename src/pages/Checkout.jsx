@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
 import { Link, useNavigate } from "react-router-dom";
+import { api } from "../config/api.js";
 import "./Checkout.css";
 
 const STEPS = ["Shipping", "Payment", "Review"];
@@ -65,9 +66,65 @@ export default function Checkout() {
     return val.replace(/\D/g, "").slice(0, 4).replace(/^(\d{2})(\d)/, "$1/$2");
   }
 
-  function handlePlaceOrder() {
-    setOrdered(true);
-    clearCart();
+  const [orderError, setOrderError]   = useState("");
+  const [orderLoading, setOrderLoading] = useState(false);
+
+  async function handlePlaceOrder() {
+    setOrderError("");
+    setOrderLoading(true);
+
+    const userId = localStorage.getItem("userId");
+
+    if (!userId) {
+      setOrderError("You must be signed in to place an order. Please sign in and try again.");
+      setOrderLoading(false);
+      return;
+    }
+
+    const cartItems = items.map((item) => ({
+      itemId:      String(item.id),
+      description: item.description  || "",
+      category:    item.category     || "",
+      brand:       item.brand        || item.category || "",
+      weight:      item.weight       || 0,
+      title:       item.title,
+      price:       item.price,
+      image:       item.thumbnail    || item.images?.[0] || "",
+      quantity:    item.qty,
+    }));
+
+    const payload = { userId, cartItems };
+
+    console.log("Cart items being sent to backend:", cartItems);
+    console.log("Full order payload:", payload);
+
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await api.post("/cart/addtocart", payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      console.log("Order response:", response.data);
+
+      if (response.data?.status === false) {
+        const msg = response.data?.message || response.data?.msg || "Order failed. Please try again.";
+        setOrderError(msg);
+      } else {
+        clearCart();
+        setOrdered(true);
+      }
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error   ||
+        err.response?.data?.msg     ||
+        err.message                 ||
+        "Failed to place order. Please try again.";
+      console.error("Order error:", err.response?.data || err.message);
+      setOrderError(message);
+    } finally {
+      setOrderLoading(false);
+    }
   }
 
   if (items.length === 0 && !ordered) {
@@ -316,9 +373,24 @@ export default function Checkout() {
                 ))}
               </div>
 
+              {orderError && (
+                <div className="co-order-error">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  {orderError}
+                </div>
+              )}
+
               <div className="co-nav">
                 <button className="co-btn co-btn--ghost" onClick={() => setStep(1)}>← Back</button>
-                <button className="co-btn co-btn--place" onClick={handlePlaceOrder}>Place Order · ${total.toFixed(2)}</button>
+                <button
+                  className="co-btn co-btn--place"
+                  onClick={handlePlaceOrder}
+                  disabled={orderLoading}
+                >
+                  {orderLoading ? "Placing Order…" : `Place Order · $${total.toFixed(2)}`}
+                </button>
               </div>
             </div>
           )}
