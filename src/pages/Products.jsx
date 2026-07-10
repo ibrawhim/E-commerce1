@@ -6,7 +6,7 @@ import ProductDetail from "./ProductDetail";
 import { getTheme } from "./categoryThemes";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../config/api.js";
 
 const DARK = {

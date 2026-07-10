@@ -3,7 +3,7 @@ import axios from "axios";
 import "./ProductDetail.css";
 import { getTheme } from "./categoryThemes";
 import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../config/api.js";
 
 function calcOriginalPrice(price, disc) {
