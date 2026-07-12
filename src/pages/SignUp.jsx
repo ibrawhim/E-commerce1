@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../config/api.js";
 import "./Auth.css";
+import { useAuth } from "../context/useAuth";
 
 function EyeIcon({ open }) {
   return open ? (

@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import "./ProductDetail.css";
 import { getTheme } from "./categoryThemes";
-import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext.jsx";
+import { useCart } from "../context/useCart";
+import { useAuth } from "../context/useAuth";
 import { api } from "../config/api.js";
 
 function calcOriginalPrice(price, disc) {
@@ -131,7 +131,7 @@ function ReviewCard({ review, theme }) {
 }
 
 export default function ProductDetail({ productId, onBack, onProductSelect, initialBg }) {
-  const { addToCart }              = useCart();
+  const { addToCart, syncBackendItem }     = useCart();
   const { user, isLoggedIn }       = useAuth();
   const [product, setProduct]      = useState(null);
   const [related, setRelated]      = useState([]);
@@ -176,8 +176,10 @@ export default function ProductDetail({ productId, onBack, onProductSelect, init
         });
         console.log("Add to cart response:", response.data);
 
-        if (response.data?.status === false) {
+        if (response.data?.success === false) {
           console.warn("Backend cart warning:", response.data?.message);
+        } else {
+          syncBackendItem(product, qty);
         }
       } catch (err) {
         console.error("Add to cart backend error:", err.response?.data || err.message);

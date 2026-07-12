@@ -1,100 +1,107 @@
-import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext.jsx";
+import { useCart } from "../context/useCart";
+import { useAuth } from "../context/useAuth";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { api } from "../config/api.js";
 import "./Cart.css";
 
 export default function Cart() {
-  const { items, removeFromCart, updateQty, subtotal, totalItems } = useCart();
+  const {
+    items, removeFromCart, updateQty, addToCart,
+    backendItems, setBackendItems, updateBackendQty, removeBackendItem,
+    cartSynced, clearCart,
+  } = useCart();
+
   const { isLoggedIn } = useAuth();
-  const navigate = useNavigate();
+  const navigate       = useNavigate();
 
-  const [coupon, setCoupon]             = useState("");
+  const [coupon, setCoupon]               = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
-  const [backendItems, setBackendItems] = useState([]);
-  const [fetchLoading, setFetchLoading] = useState(false);
-  const [fetchError, setFetchError]     = useState("");
 
-  useEffect(() => {
+  const displayItems    = cartSynced && backendItems.length > 0 ? backendItems : items;
+  const displaySubtotal = displayItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const displayCount    = displayItems.length;
+
+  const shipping = displaySubtotal > 50 ? 0 : 9.99;
+  const discount = couponApplied ? displaySubtotal * 0.1 : 0;
+  const tax      = (displaySubtotal - discount) * 0.075;
+  const total    = displaySubtotal - discount + shipping + tax;
+
+  function getHeaders() {
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  async function handleQty(item, newQty) {
+    if (newQty < 1) return;
+
+    if (cartSynced) {
+      updateBackendQty(item.id, newQty);
+    } else {
+      updateQty(item.id, newQty);
+    }
+
+    if (!isLoggedIn) return;
+
+    const payload = { itemId: item.itemId, quantity: newQty };
+    console.log("Updating qty — _id:", item.id, "itemId:", item.itemId, "payload:", payload);
+
+    try {
+      const response = await api.patch("/cart/update/", payload, { headers: getHeaders() });
+      console.log("Update qty response:", response.data);
+    } catch (err) {
+      console.error("Update qty error:", err.response?.data || err.message);
+      if (cartSynced) updateBackendQty(item.id, item.qty);
+      else updateQty(item.id, item.qty);
+    }
+  }
+
+  async function handleRemove(item) {
     if (!isLoggedIn) {
-      console.log("Local cart items:", items);
+      removeFromCart(item.id);
       return;
     }
 
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (cartSynced) {
+      removeBackendItem(item.id);
+    } else {
+      removeFromCart(item.id);
+    }
 
-    setFetchLoading(true);
-    setFetchError("");
+    console.log("Removing item — _id:", item.id, "itemId:", item.itemId);
 
-    api
-      .get("/cart/", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((response) => {
-        console.log("Backend cart response:", response.data);
+    try {
+      const response = await api.delete(`/cart/remove/${item.itemId}`, {
+        headers: getHeaders(),
+      });
+      console.log("Remove item response:", response.data);
+    } catch (err) {
+      console.error("Remove item error:", err.response?.data || err.message);
+      if (cartSynced) {
+        setBackendItems((prev) => [...prev, item]);
+      } else {
+        addToCart(item, item.qty);
+      }
+    }
+  }
 
-        if (response.data?.success === false) {
-          setFetchError(response.data?.message || "Failed to load cart.");
-          return;
-        }
+  async function handleClearCart() {
+    clearCart();
 
-        const raw = response.data?.cart?.cartItems || [];
+    if (!isLoggedIn) return;
 
-        const mapped = raw.map((item) => ({
-          id:          item._id,
-          itemId:      item.itemId,
-          title:       item.title,
-          description: item.description,
-          category:    item.category,
-          brand:       item.brand,
-          weight:      item.weight,
-          price:       item.price,
-          thumbnail:   item.image,
-          qty:         item.quantity,
-          sku:         item.itemId,
-          stock:       999,
-        }));
+    console.log("Clearing cart...");
 
-        console.log("Mapped backend cart items:", mapped);
-        setBackendItems(mapped);
-      })
-      .catch((err) => {
-        const msg =
-          err.response?.data?.message ||
-          err.response?.data?.msg     ||
-          err.message                 ||
-          "Could not load cart from server.";
-        console.error("Fetch cart error:", err.response?.data || err.message);
-        setFetchError(msg);
-      })
-      .finally(() => setFetchLoading(false));
-  }, [isLoggedIn]);
-
-  const displayItems = isLoggedIn && backendItems.length > 0 ? backendItems : items;
-
-  const displaySubtotal = displayItems.reduce((s, item) => s + item.price * item.qty, 0);
-  const displayCount    = displayItems.reduce((s, item) => s + item.qty, 0);
-
-  const shipping      = displaySubtotal > 50 ? 0 : 9.99;
-  const discount      = couponApplied ? displaySubtotal * 0.1 : 0;
-  const tax           = (displaySubtotal - discount) * 0.075;
-  const total         = displaySubtotal - discount + shipping + tax;
+    try {
+      const response = await api.delete("/cart/clear/", { headers: getHeaders() });
+      console.log("Clear cart response:", response.data);
+    } catch (err) {
+      console.error("Clear cart error:", err.response?.data || err.message);
+    }
+  }
 
   function handleApplyCoupon() {
     if (coupon.trim().toLowerCase() === "save10") setCouponApplied(true);
-  }
-
-  if (fetchLoading) {
-    return (
-      <div className="cart-empty">
-        <div className="cart-loading-dots">
-          <span /><span /><span />
-        </div>
-        <p style={{ color: "#7A9A82", fontSize: "13px" }}>Loading your cart…</p>
-      </div>
-    );
   }
 
   if (displayItems.length === 0) {
@@ -109,9 +116,6 @@ export default function Cart() {
         </div>
         <h2 className="cart-empty__title">Your cart is empty</h2>
         <p className="cart-empty__sub">Looks like you haven't added anything yet.</p>
-        {fetchError && (
-          <p className="cart-fetch-error">{fetchError}</p>
-        )}
         <Link to="/" className="cart-empty__btn">Continue Shopping</Link>
       </div>
     );
@@ -125,7 +129,7 @@ export default function Cart() {
             <h1 className="cart-header__title">My Cart</h1>
             <p className="cart-header__count">
               {displayCount} item{displayCount !== 1 ? "s" : ""}
-              {isLoggedIn && backendItems.length > 0 && (
+              {cartSynced && (
                 <span className="cart-header__source"> · synced from account</span>
               )}
             </p>
@@ -133,12 +137,6 @@ export default function Cart() {
           <Link to="/" className="cart-header__keep">← Keep Shopping</Link>
         </div>
       </div>
-
-      {fetchError && (
-        <div className="cart-fetch-error-bar">
-          ⚠ {fetchError} — showing local cart instead.
-        </div>
-      )}
 
       <div className="cart-body">
         <div className="cart-items">
@@ -150,74 +148,67 @@ export default function Cart() {
             <span className="cart-col cart-col--del" />
           </div>
 
-          {displayItems.map((item) => {
-            const lineTotal = (item.price * item.qty).toFixed(2);
-            return (
-              <div key={item.id} className="cart-row">
-                <div className="cart-col cart-col--product">
-                  <img
-                    src={item.thumbnail || item.image}
-                    alt={item.title}
-                    className="cart-row__img"
-                    onClick={() => navigate("/")}
-                  />
-                  <div className="cart-row__info">
-                    <p className="cart-row__brand">{item.brand || item.category}</p>
-                    <p className="cart-row__title">{item.title}</p>
-                    <p className="cart-row__sku">SKU: {item.sku || item.itemId || "N/A"}</p>
-                    {item.stock <= 5 && item.stock > 0 && (
-                      <p className="cart-row__low-stock">Only {item.stock} left!</p>
-                    )}
-                  </div>
+          {displayItems.map((item) => (
+            <div key={item.id} className="cart-row">
+              <div className="cart-col cart-col--product">
+                <img
+                  src={item.thumbnail || item.image}
+                  alt={item.title}
+                  className="cart-row__img"
+                  onClick={() => navigate("/")}
+                />
+                <div className="cart-row__info">
+                  <p className="cart-row__brand">{item.brand || item.category}</p>
+                  <p className="cart-row__title">{item.title}</p>
+                  <p className="cart-row__sku">SKU: {item.sku || item.itemId || "N/A"}</p>
                 </div>
+              </div>
 
-                <div className="cart-col cart-col--price">
-                  <span className="cart-row__price">${item.price.toFixed(2)}</span>
-                </div>
+              <div className="cart-col cart-col--price">
+                <span className="cart-row__price">${item.price.toFixed(2)}</span>
+              </div>
 
-                <div className="cart-col cart-col--qty">
-                  <div className="cart-qty">
-                    <button
-                      className="cart-qty__btn"
-                      onClick={() => updateQty(item.id, item.qty - 1)}
-                      disabled={item.qty <= 1}
-                    >−</button>
-                    <span className="cart-qty__val">{item.qty}</span>
-                    <button
-                      className="cart-qty__btn"
-                      onClick={() => updateQty(item.id, item.qty + 1)}
-                      disabled={item.qty >= (item.stock || 999)}
-                    >+</button>
-                  </div>
-                </div>
-
-                <div className="cart-col cart-col--sub">
-                  <span className="cart-row__sub">${lineTotal}</span>
-                </div>
-
-                <div className="cart-col cart-col--del">
+              <div className="cart-col cart-col--qty">
+                <div className="cart-qty">
                   <button
-                    className="cart-row__remove"
-                    onClick={() => {
-                      if (isLoggedIn && backendItems.length > 0) {
-                        setBackendItems((prev) => prev.filter((i) => i.id !== item.id));
-                      } else {
-                        removeFromCart(item.id);
-                      }
-                    }}
-                    aria-label="Remove item"
+                    className="cart-qty__btn"
+                    onClick={() => handleQty(item, item.qty - 1)}
+                    disabled={item.qty <= 1}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                      <path d="M10 11v6M14 11v6"/>
-                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                    </svg>
+                    −
+                  </button>
+                  <span className="cart-qty__val">{item.qty}</span>
+                  <button
+                    className="cart-qty__btn"
+                    onClick={() => handleQty(item, item.qty + 1)}
+                  >
+                    +
                   </button>
                 </div>
               </div>
-            );
-          })}
+
+              <div className="cart-col cart-col--sub">
+                <span className="cart-row__sub">
+                  ${(item.price * item.qty).toFixed(2)}
+                </span>
+              </div>
+
+              <div className="cart-col cart-col--del">
+                <button
+                  className="cart-row__remove"
+                  onClick={() => handleRemove(item)}
+                  aria-label="Remove item"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))}
 
           <div className="cart-items__footer">
             <span className="cart-items__subtotal-label">Order Subtotal</span>
@@ -290,6 +281,13 @@ export default function Cart() {
             onClick={() => navigate("/checkout")}
           >
             Proceed to Checkout →
+          </button>
+
+          <button
+            className="cart-summary__clear-btn"
+            onClick={handleClearCart}
+          >
+            Clear Cart
           </button>
 
           <div className="cart-summary__trust">

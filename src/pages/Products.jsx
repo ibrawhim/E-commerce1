@@ -4,9 +4,9 @@ import "./Products.css";
 import CategoryHero from "./CategoryHero";
 import ProductDetail from "./ProductDetail";
 import { getTheme } from "./categoryThemes";
-import { useCart } from "../context/CartContext";
-import { useTheme } from "../context/ThemeContext";
-import { useAuth } from "../context/AuthContext.jsx";
+import { useCart } from "../context/useCart";
+import { useTheme } from "../context/useTheme";
+import { useAuth } from "../context/useAuth";
 import { api } from "../config/api.js";
 
 const DARK = {
@@ -56,9 +56,9 @@ function ListIcon({ active }) {
 }
 
 function ProductCard({ product, theme, onClick, viewMode, isDark }) {
-  const { addToCart }        = useCart();
-  const { user, isLoggedIn } = useAuth();
-  const [added, setAdded]    = useState(false);
+  const { addToCart, syncBackendItem } = useCart();
+  const { user, isLoggedIn }           = useAuth();
+  const [added, setAdded]              = useState(false);
 
   const originalPrice = (product.price / (1 - product.discountPercentage / 100)).toFixed(2);
   const hasDiscount   = product.discountPercentage > 0;
@@ -96,6 +96,9 @@ function ProductCard({ product, theme, onClick, viewMode, isDark }) {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         console.log("Add to cart response:", response.data);
+        if (response.data?.success !== false) {
+          syncBackendItem(product, 1);
+        }
       } catch (err) {
         console.error("Add to cart error:", err.response?.data || err.message);
       }
@@ -332,7 +335,10 @@ const Products = () => {
       {error && <div className="catalog-error">Failed to load products. Please try again.</div>}
 
       {!loading && !error && (
-        <div className="catalog-top-row">
+        <div
+          className="catalog-top-row"
+          style={{ background: pageBg }}
+        >
           <CategoryHero theme={theme} category={activeCategory} />
           <CategorySidebar
             categories={categories}

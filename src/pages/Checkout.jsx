@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useCart } from "../context/CartContext";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../config/api.js";
 import "./Checkout.css";
+import { useCart } from "../context/useCart";
 
 const STEPS = ["Shipping", "Payment", "Review"];
 
@@ -111,6 +111,14 @@ export default function Checkout() {
         setOrderError(msg);
       } else {
         clearCart();
+        try {
+          await api.delete("/cart/clear/", {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          console.log("Cart cleared after order.");
+        } catch (clearErr) {
+          console.error("Clear cart error:", clearErr.message);
+        }
         setOrdered(true);
       }
     } catch (err) {

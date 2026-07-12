@@ -251,3 +251,26 @@ body {
 .auth-field__label { color: var(--text-secondary) !important; }
 .auth-card__footer { color: var(--text-muted) !important; }
 .auth-submit-btn { background: var(--brand-green) !important; color: var(--bg-page) !important; }
+
+[data-theme="dark"] .catalog-top-row {
+  background: #0C1410 !important;
+}
+
+[data-theme="dark"] .catalog-sidebar {
+  background: #111F16 !important;
+  border-color: #1E3828 !important;
+}
+
+[data-theme="dark"] .category-hero {
+  background: linear-gradient(150deg, #0C1410 0%, #111F16 50%, #0C1410 100%) !important;
+}
+
+[data-theme="dark"] .hero-cta__ghost {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: var(--brand-green) !important;
+}
+
+[data-theme="dark"] .hero-stat__label { color: #4A7A5A !important; }
+
+[data-theme="dark"] .catalog-grid { background: #1E3828 !important; }
+[data-theme="dark"] .catalog-list  { background: #0C1410 !important; }
