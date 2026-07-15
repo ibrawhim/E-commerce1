@@ -9,6 +9,7 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 function App() {
   return (
@@ -17,11 +18,12 @@ function App() {
         <CartProvider>
           <Navbar />
           <Routes>
-            <Route path="/"         element={<Products />} />
-            <Route path="/cart"     element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/signin"   element={<SignIn />} />
-            <Route path="/signup"   element={<SignUp />} />
+            <Route path="/"                element={<Products />} />
+            <Route path="/cart"            element={<Cart />} />
+            <Route path="/checkout"        element={<Checkout />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/signin"          element={<SignIn />} />
+            <Route path="/signup"          element={<SignUp />} />
           </Routes>
           <Footer />
         </CartProvider>
