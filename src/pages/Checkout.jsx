@@ -91,6 +91,19 @@ export default function Checkout() {
       console.log("Payment initialize response:", response.data);
 
       if (response.data?.success && response.data?.authorization_url) {
+        const shippingAddress = {
+          firstName: shipping.firstName,
+          lastName:  shipping.lastName,
+          email:     shipping.email,
+          phone:     shipping.phone,
+          address:   shipping.address,
+          city:      shipping.city,
+          state:     shipping.state,
+          zip:       shipping.zip,
+          country:   shipping.country,
+        };
+        sessionStorage.setItem("bcommerce-shipping", JSON.stringify(shippingAddress));
+        console.log("Saved shipping address to sessionStorage:", shippingAddress);
         window.location.href = response.data.authorization_url;
       } else {
         const msg =
