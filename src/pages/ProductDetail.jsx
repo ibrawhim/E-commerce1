@@ -146,6 +146,11 @@ export default function ProductDetail({ productId, onBack, onProductSelect, init
   const [cartLoading, setCartLoading]   = useState(false);
 
   async function handleAddToCart() {
+    if (!isLoggedIn) {
+      window.location.href = "/signin";
+      return;
+    }
+
     setCartError("");
     setCartLoading(true);
 

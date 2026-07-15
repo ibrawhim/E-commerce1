@@ -1,8 +1,8 @@
 import { useState } from "react";
+import { useCart } from "../context/useCart";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../config/api.js";
 import "./Checkout.css";
-import { useCart } from "../context/useCart";
 
 const STEPS = ["Shipping", "Payment", "Review"];
 
@@ -73,53 +73,31 @@ export default function Checkout() {
     setOrderError("");
     setOrderLoading(true);
 
-    const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
 
-    if (!userId) {
+    if (!token) {
       setOrderError("You must be signed in to place an order. Please sign in and try again.");
       setOrderLoading(false);
       return;
     }
 
-    const cartItems = items.map((item) => ({
-      itemId:      String(item.id),
-      description: item.description  || "",
-      category:    item.category     || "",
-      brand:       item.brand        || item.category || "",
-      weight:      item.weight       || 0,
-      title:       item.title,
-      price:       item.price,
-      image:       item.thumbnail    || item.images?.[0] || "",
-      quantity:    item.qty,
-    }));
-
-    const payload = { userId, cartItems };
-
-    console.log("Cart items being sent to backend:", cartItems);
-    console.log("Full order payload:", payload);
-
-    const token = localStorage.getItem("token");
-
     try {
-      const response = await api.post("/cart/addtocart", payload, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      console.log("Order response:", response.data);
+      const response = await api.post(
+        "/payment/initialize",
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      if (response.data?.status === false) {
-        const msg = response.data?.message || response.data?.msg || "Order failed. Please try again.";
-        setOrderError(msg);
+      console.log("Payment initialize response:", response.data);
+
+      if (response.data?.success && response.data?.authorization_url) {
+        window.location.href = response.data.authorization_url;
       } else {
-        clearCart();
-        try {
-          await api.delete("/cart/clear/", {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          });
-          console.log("Cart cleared after order.");
-        } catch (clearErr) {
-          console.error("Clear cart error:", clearErr.message);
-        }
-        setOrdered(true);
+        const msg =
+          response.data?.message ||
+          response.data?.msg     ||
+          "Payment initialization failed. Please try again.";
+        setOrderError(msg);
       }
     } catch (err) {
       const message =
@@ -127,8 +105,8 @@ export default function Checkout() {
         err.response?.data?.error   ||
         err.response?.data?.msg     ||
         err.message                 ||
-        "Failed to place order. Please try again.";
-      console.error("Order error:", err.response?.data || err.message);
+        "Failed to initialize payment. Please try again.";
+      console.error("Payment initialize error:", err.response?.data || err.message);
       setOrderError(message);
     } finally {
       setOrderLoading(false);

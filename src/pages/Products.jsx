@@ -72,6 +72,12 @@ function ProductCard({ product, theme, onClick, viewMode, isDark }) {
 
   async function handleAdd(e) {
     e.stopPropagation();
+
+    if (!isLoggedIn) {
+      window.location.href = "/signin";
+      return;
+    }
+
     addToCart(product, 1);
 
     if (isLoggedIn && user?._id) {

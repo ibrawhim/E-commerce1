@@ -12,17 +12,21 @@ export const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const status = error.response?.status;
+    const status  = error.response?.status;
     const message =
       error.response?.data?.message ||
       error.response?.data?.msg     ||
       "";
 
+    const hadToken = !!localStorage.getItem("token");
+
     const isExpired =
-      status === 401 ||
-      message.toLowerCase().includes("token") ||
-      message.toLowerCase().includes("expired") ||
-      message.toLowerCase().includes("unauthorized");
+      hadToken && (
+        status === 401 ||
+        message.toLowerCase().includes("expired") ||
+        message.toLowerCase().includes("jwt") ||
+        message.toLowerCase().includes("invalid token")
+      );
 
     if (isExpired) {
       localStorage.removeItem("token");

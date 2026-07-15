@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../config/api.js";
+import { useSignUpForm } from "../hooks/useSignUpForm";
 import "./Auth.css";
-import { useAuth } from "../context/useAuth";
 
 function EyeIcon({ open }) {
   return open ? (
@@ -18,37 +18,54 @@ function EyeIcon({ open }) {
   );
 }
 
-export default function SignUp() {
-  const [formData, setFormData]         = useState({ firstName: "", lastName: "", email: "", password: "" });
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState("");
-  const [success, setSuccess]           = useState("");
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  );
+}
 
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setError("");
-    setSuccess("");
-  }
+function XIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/>
+      <line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  );
+}
+
+export default function SignUp() {
+  const {
+    values, errors, touched,
+    showPassword, setShowPassword,
+    handleChange, handleBlur,
+    passwordRules, showRules,
+    isFormValid, getPayload, reset,
+  } = useSignUpForm();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+  const [success, setSuccess] = useState("");
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!isFormValid) return;
+
     setLoading(true);
     setError("");
     setSuccess("");
+
     try {
-      const response = await api.post("/signup", formData);
+      const response = await api.post("/signup", getPayload());
       console.log("Sign Up response:", response.data);
+
       if (response.data?.status === false) {
-        const msg =
-          response.data?.message ||
-          response.data?.msg     ||
-          "Sign up failed. Please try again.";
-        setError(msg);
+        setError(response.data?.message || response.data?.msg || "Sign up failed.");
       } else {
         const msg = response.data?.message || response.data?.msg || "Account created successfully!";
         setSuccess(msg);
+        reset();
       }
     } catch (err) {
       const message =
@@ -116,31 +133,37 @@ export default function SignUp() {
             <span />
           </div>
 
-          <form className="auth-form" onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={handleSubmit} noValidate>
             <div className="auth-field-row">
               <div className="auth-field">
                 <label className="auth-field__label">First name</label>
                 <input
                   type="text"
                   name="firstName"
-                  className="auth-field__input"
+                  className={`auth-field__input ${touched.firstName && errors.firstName ? "auth-field__input--error" : ""}`}
                   placeholder="Ibrahim"
-                  value={formData.firstName}
+                  value={values.firstName}
                   onChange={handleChange}
-                  required
+                  onBlur={handleBlur}
                 />
+                {touched.firstName && errors.firstName && (
+                  <span className="auth-field__error">{errors.firstName}</span>
+                )}
               </div>
               <div className="auth-field">
                 <label className="auth-field__label">Last name</label>
                 <input
                   type="text"
                   name="lastName"
-                  className="auth-field__input"
+                  className={`auth-field__input ${touched.lastName && errors.lastName ? "auth-field__input--error" : ""}`}
                   placeholder="Yusuf"
-                  value={formData.lastName}
+                  value={values.lastName}
                   onChange={handleChange}
-                  required
+                  onBlur={handleBlur}
                 />
+                {touched.lastName && errors.lastName && (
+                  <span className="auth-field__error">{errors.lastName}</span>
+                )}
               </div>
             </div>
 
@@ -149,12 +172,15 @@ export default function SignUp() {
               <input
                 type="email"
                 name="email"
-                className="auth-field__input"
+                className={`auth-field__input ${touched.email && errors.email ? "auth-field__input--error" : ""}`}
                 placeholder="you@example.com"
-                value={formData.email}
+                value={values.email}
                 onChange={handleChange}
-                required
+                onBlur={handleBlur}
               />
+              {touched.email && errors.email && (
+                <span className="auth-field__error">{errors.email}</span>
+              )}
             </div>
 
             <div className="auth-field">
@@ -163,12 +189,11 @@ export default function SignUp() {
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
-                  className="auth-field__input auth-field__input--has-icon"
+                  className={`auth-field__input auth-field__input--has-icon ${touched.password && errors.password ? "auth-field__input--error" : ""}`}
                   placeholder="Min. 8 characters"
-                  value={formData.password}
+                  value={values.password}
                   onChange={handleChange}
-                  required
-                  minLength={8}
+                  onBlur={handleBlur}
                 />
                 <button
                   type="button"
@@ -179,12 +204,48 @@ export default function SignUp() {
                   <EyeIcon open={showPassword} />
                 </button>
               </div>
+
+              <ul className="auth-password-rules">
+                {passwordRules.map((rule) => (
+                  <li
+                    key={rule.id}
+                    className={`auth-password-rule ${
+                      rule.passed
+                        ? "auth-password-rule--pass"
+                        : values.password.length > 0
+                        ? "auth-password-rule--fail"
+                        : "auth-password-rule--pending"
+                    }`}
+                  >
+                    <span className="auth-password-rule__icon">
+                      {rule.passed ? <CheckIcon /> : <XIcon />}
+                    </span>
+                    {rule.label}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {error   && <p className="auth-error">{error}</p>}
             {success && <p className="auth-success">{success}</p>}
 
-            <button type="submit" className="auth-submit-btn" disabled={loading}>
+            {!isFormValid && (
+              <p className="auth-submit-hint">
+                {!values.firstName.trim() || !values.lastName.trim()
+                  ? "Please fill in your first and last name."
+                  : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)
+                  ? "Please enter a valid email address."
+                  : !passwordValid
+                  ? "Password must meet all 3 requirements above."
+                  : "Please complete all fields to continue."}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={loading || !isFormValid}
+            >
               {loading ? "Creating account…" : "Create Account"}
             </button>
           </form>
