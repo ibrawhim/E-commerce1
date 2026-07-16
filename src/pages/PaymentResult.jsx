@@ -23,12 +23,25 @@ export default function PaymentResult() {
     const token   = localStorage.getItem("token");
     let shippingAddress = {};
     try {
-      const stored = sessionStorage.getItem("bcommerce-shipping");
-      if (stored) shippingAddress = JSON.parse(stored);
+      const stored =
+        localStorage.getItem("bcommerce-shipping") ||
+        sessionStorage.getItem("bcommerce-shipping");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        shippingAddress = {
+          firstName: parsed.firstName || "",
+          lastName:  parsed.lastName  || "",
+          phone:     parsed.phone     || "",
+          country:   parsed.country   || "",
+          state:     parsed.state     || "",
+          city:      parsed.city      || "",
+          address:   parsed.address   || "",
+        };
+      }
     } catch {}
 
     const payload = { reference, shippingAddress };
-    console.log("Verifying payment — payload:", payload);
+    console.log("Verifying payment — payload:", JSON.stringify(payload, null, 2));
 
     api
       .post("/payment/verify", payload, {
@@ -41,6 +54,7 @@ export default function PaymentResult() {
           setStatus("success");
           clearCart();
           sessionStorage.removeItem("bcommerce-shipping");
+          localStorage.removeItem("bcommerce-shipping");
         } else {
           setStatus("failed");
           setErrorMsg(

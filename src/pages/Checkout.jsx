@@ -6,6 +6,25 @@ import "./Checkout.css";
 
 const STEPS = ["Shipping", "Payment", "Review"];
 
+const REQUIRED_SHIPPING_FIELDS = [
+  "firstName", "lastName", "email", "phone",
+  "address", "city", "state", "zip", "country",
+];
+
+const FIELD_LABELS = {
+  firstName: "First name",
+  lastName: "Last name",
+  email: "Email",
+  phone: "Phone",
+  address: "Street address",
+  city: "City",
+  state: "State",
+  zip: "ZIP code",
+  country: "Country",
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function StepIndicator({ step }) {
   return (
     <div className="co-steps">
@@ -39,10 +58,14 @@ export default function Checkout() {
     address: "", city: "", state: "", zip: "", country: "United States",
   });
 
+  const [shippingErrors, setShippingErrors] = useState({});
+
   const [payment, setPayment] = useState({
     method: "card",
     cardName: "", cardNumber: "", expiry: "", cvv: "",
   });
+
+  const [paymentErrors, setPaymentErrors] = useState({});
 
   const [shippingMethod, setShippingMethod] = useState("standard");
 
@@ -51,11 +74,42 @@ export default function Checkout() {
   const total = subtotal + shippingCost + tax;
 
   function handleShippingChange(e) {
-    setShipping((p) => ({ ...p, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setShipping((p) => ({ ...p, [name]: value }));
+    if (shippingErrors[name]) {
+      setShippingErrors((p) => ({ ...p, [name]: undefined }));
+    }
+  }
+
+  function validateShipping() {
+    const errors = {};
+
+    REQUIRED_SHIPPING_FIELDS.forEach((field) => {
+      if (!shipping[field] || !shipping[field].trim()) {
+        errors[field] = `${FIELD_LABELS[field]} is required.`;
+      }
+    });
+
+    if (!errors.email && !EMAIL_RE.test(shipping.email.trim())) {
+      errors.email = "Enter a valid email address.";
+    }
+
+    setShippingErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  function handleContinueToPayment() {
+    if (validateShipping()) {
+      setStep(1);
+    }
   }
 
   function handlePaymentChange(e) {
-    setPayment((p) => ({ ...p, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setPayment((p) => ({ ...p, [name]: value }));
+    if (paymentErrors[name]) {
+      setPaymentErrors((p) => ({ ...p, [name]: undefined }));
+    }
   }
 
   function formatCard(val) {
@@ -64,6 +118,55 @@ export default function Checkout() {
 
   function formatExpiry(val) {
     return val.replace(/\D/g, "").slice(0, 4).replace(/^(\d{2})(\d)/, "$1/$2");
+  }
+
+  function handlePaymentMethodChange(method) {
+    setPayment((p) => ({ ...p, method }));
+    setPaymentErrors({});
+  }
+
+  function validatePayment() {
+    if (payment.method !== "card") {
+      setPaymentErrors({});
+      return true;
+    }
+
+    const errors = {};
+
+    if (!payment.cardName.trim()) {
+      errors.cardName = "Name on card is required.";
+    }
+
+    const digits = payment.cardNumber.replace(/\s/g, "");
+    if (!digits) {
+      errors.cardNumber = "Card number is required.";
+    } else if (digits.length !== 16) {
+      errors.cardNumber = "Enter a valid 16-digit card number.";
+    }
+
+    if (!payment.expiry) {
+      errors.expiry = "Expiry date is required.";
+    } else {
+      const match = payment.expiry.match(/^(\d{2})\/(\d{2})$/);
+      if (!match || Number(match[1]) < 1 || Number(match[1]) > 12) {
+        errors.expiry = "Enter a valid expiry date (MM/YY).";
+      }
+    }
+
+    if (!payment.cvv) {
+      errors.cvv = "CVV is required.";
+    } else if (payment.cvv.length < 3) {
+      errors.cvv = "Enter a valid CVV.";
+    }
+
+    setPaymentErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  function handleContinueToReview() {
+    if (validatePayment()) {
+      setStep(2);
+    }
   }
 
   const [orderError, setOrderError]   = useState("");
@@ -94,16 +197,15 @@ export default function Checkout() {
         const shippingAddress = {
           firstName: shipping.firstName,
           lastName:  shipping.lastName,
-          email:     shipping.email,
           phone:     shipping.phone,
-          address:   shipping.address,
-          city:      shipping.city,
-          state:     shipping.state,
-          zip:       shipping.zip,
           country:   shipping.country,
+          state:     shipping.state,
+          city:      shipping.city,
+          address:   shipping.address,
         };
         sessionStorage.setItem("bcommerce-shipping", JSON.stringify(shippingAddress));
-        console.log("Saved shipping address to sessionStorage:", shippingAddress);
+        localStorage.setItem("bcommerce-shipping", JSON.stringify(shippingAddress));
+        console.log("Saved shipping address:", shippingAddress);
         window.location.href = response.data.authorization_url;
       } else {
         const msg =
@@ -172,48 +274,120 @@ export default function Checkout() {
                 <div className="co-field-row">
                   <div className="co-field">
                     <label className="co-field__label">First Name</label>
-                    <input className="co-field__input" name="firstName" placeholder="Ibrahim" value={shipping.firstName} onChange={handleShippingChange} />
+                    <input
+                      className={`co-field__input ${shippingErrors.firstName ? "co-field__input--error" : ""}`}
+                      name="firstName"
+                      placeholder="Ibrahim"
+                      value={shipping.firstName}
+                      onChange={handleShippingChange}
+                      required
+                    />
+                    {shippingErrors.firstName && <span className="co-field__error">{shippingErrors.firstName}</span>}
                   </div>
                   <div className="co-field">
                     <label className="co-field__label">Last Name</label>
-                    <input className="co-field__input" name="lastName" placeholder="Abiodun" value={shipping.lastName} onChange={handleShippingChange} />
+                    <input
+                      className={`co-field__input ${shippingErrors.lastName ? "co-field__input--error" : ""}`}
+                      name="lastName"
+                      placeholder="Abiodun"
+                      value={shipping.lastName}
+                      onChange={handleShippingChange}
+                      required
+                    />
+                    {shippingErrors.lastName && <span className="co-field__error">{shippingErrors.lastName}</span>}
                   </div>
                 </div>
                 <div className="co-field-row">
                   <div className="co-field">
                     <label className="co-field__label">Email</label>
-                    <input className="co-field__input" name="email" type="email" placeholder="you@example.com" value={shipping.email} onChange={handleShippingChange} />
+                    <input
+                      className={`co-field__input ${shippingErrors.email ? "co-field__input--error" : ""}`}
+                      name="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={shipping.email}
+                      onChange={handleShippingChange}
+                      required
+                    />
+                    {shippingErrors.email && <span className="co-field__error">{shippingErrors.email}</span>}
                   </div>
                   <div className="co-field">
                     <label className="co-field__label">Phone</label>
-                    <input className="co-field__input" name="phone" placeholder="+1 (555) 000-0000" value={shipping.phone} onChange={handleShippingChange} />
+                    <input
+                      className={`co-field__input ${shippingErrors.phone ? "co-field__input--error" : ""}`}
+                      name="phone"
+                      placeholder="+1 (555) 000-0000"
+                      value={shipping.phone}
+                      onChange={handleShippingChange}
+                      required
+                    />
+                    {shippingErrors.phone && <span className="co-field__error">{shippingErrors.phone}</span>}
                   </div>
                 </div>
                 <div className="co-field">
                   <label className="co-field__label">Street Address</label>
-                  <input className="co-field__input" name="address" placeholder="123 Main Street, Apt 4B" value={shipping.address} onChange={handleShippingChange} />
+                  <input
+                    className={`co-field__input ${shippingErrors.address ? "co-field__input--error" : ""}`}
+                    name="address"
+                    placeholder="123 Main Street, Apt 4B"
+                    value={shipping.address}
+                    onChange={handleShippingChange}
+                    required
+                  />
+                  {shippingErrors.address && <span className="co-field__error">{shippingErrors.address}</span>}
                 </div>
                 <div className="co-field-row co-field-row--3">
                   <div className="co-field">
                     <label className="co-field__label">City</label>
-                    <input className="co-field__input" name="city" placeholder="New York" value={shipping.city} onChange={handleShippingChange} />
+                    <input
+                      className={`co-field__input ${shippingErrors.city ? "co-field__input--error" : ""}`}
+                      name="city"
+                      placeholder="New York"
+                      value={shipping.city}
+                      onChange={handleShippingChange}
+                      required
+                    />
+                    {shippingErrors.city && <span className="co-field__error">{shippingErrors.city}</span>}
                   </div>
                   <div className="co-field">
                     <label className="co-field__label">State</label>
-                    <input className="co-field__input" name="state" placeholder="NY" value={shipping.state} onChange={handleShippingChange} />
+                    <input
+                      className={`co-field__input ${shippingErrors.state ? "co-field__input--error" : ""}`}
+                      name="state"
+                      placeholder="NY"
+                      value={shipping.state}
+                      onChange={handleShippingChange}
+                      required
+                    />
+                    {shippingErrors.state && <span className="co-field__error">{shippingErrors.state}</span>}
                   </div>
                   <div className="co-field">
                     <label className="co-field__label">ZIP Code</label>
-                    <input className="co-field__input" name="zip" placeholder="10001" value={shipping.zip} onChange={handleShippingChange} />
+                    <input
+                      className={`co-field__input ${shippingErrors.zip ? "co-field__input--error" : ""}`}
+                      name="zip"
+                      placeholder="10001"
+                      value={shipping.zip}
+                      onChange={handleShippingChange}
+                      required
+                    />
+                    {shippingErrors.zip && <span className="co-field__error">{shippingErrors.zip}</span>}
                   </div>
                 </div>
                 <div className="co-field">
                   <label className="co-field__label">Country</label>
-                  <select className="co-field__input co-field__select" name="country" value={shipping.country} onChange={handleShippingChange}>
+                  <select
+                    className={`co-field__input co-field__select ${shippingErrors.country ? "co-field__input--error" : ""}`}
+                    name="country"
+                    value={shipping.country}
+                    onChange={handleShippingChange}
+                    required
+                  >
                     {["United States","United Kingdom","Canada","Australia","Nigeria","Germany","France","Japan"].map(c => (
                       <option key={c}>{c}</option>
                     ))}
                   </select>
+                  {shippingErrors.country && <span className="co-field__error">{shippingErrors.country}</span>}
                 </div>
 
                 <h3 className="co-section__sub">Shipping Method</h3>
@@ -236,7 +410,7 @@ export default function Checkout() {
               </div>
               <div className="co-nav">
                 <span />
-                <button className="co-btn co-btn--primary" onClick={() => setStep(1)}>Continue to Payment →</button>
+                <button className="co-btn co-btn--primary" onClick={handleContinueToPayment}>Continue to Payment →</button>
               </div>
             </div>
           )}
@@ -250,7 +424,7 @@ export default function Checkout() {
                     <button
                       key={id}
                       className={`co-payment-tab ${payment.method === id ? "co-payment-tab--active" : ""}`}
-                      onClick={() => setPayment((p) => ({ ...p, method: id }))}
+                      onClick={() => handlePaymentMethodChange(id)}
                     >
                       {label}
                     </button>
@@ -261,41 +435,64 @@ export default function Checkout() {
                   <>
                     <div className="co-field">
                       <label className="co-field__label">Name on Card</label>
-                      <input className="co-field__input" name="cardName" placeholder="Ibrahim Abiodun" value={payment.cardName} onChange={handlePaymentChange} />
+                      <input
+                        className={`co-field__input ${paymentErrors.cardName ? "co-field__input--error" : ""}`}
+                        name="cardName"
+                        placeholder="Ibrahim Abiodun"
+                        value={payment.cardName}
+                        onChange={handlePaymentChange}
+                        required
+                      />
+                      {paymentErrors.cardName && <span className="co-field__error">{paymentErrors.cardName}</span>}
                     </div>
                     <div className="co-field">
                       <label className="co-field__label">Card Number</label>
                       <input
-                        className="co-field__input co-field__input--mono"
+                        className={`co-field__input co-field__input--mono ${paymentErrors.cardNumber ? "co-field__input--error" : ""}`}
                         name="cardNumber"
                         placeholder="1234 5678 9012 3456"
                         value={payment.cardNumber}
-                        onChange={(e) => setPayment((p) => ({ ...p, cardNumber: formatCard(e.target.value) }))}
+                        onChange={(e) => {
+                          setPayment((p) => ({ ...p, cardNumber: formatCard(e.target.value) }));
+                          if (paymentErrors.cardNumber) setPaymentErrors((p) => ({ ...p, cardNumber: undefined }));
+                        }}
                         maxLength={19}
+                        required
                       />
+                      {paymentErrors.cardNumber && <span className="co-field__error">{paymentErrors.cardNumber}</span>}
                     </div>
                     <div className="co-field-row">
                       <div className="co-field">
                         <label className="co-field__label">Expiry Date</label>
                         <input
-                          className="co-field__input co-field__input--mono"
+                          className={`co-field__input co-field__input--mono ${paymentErrors.expiry ? "co-field__input--error" : ""}`}
                           name="expiry"
                           placeholder="MM/YY"
                           value={payment.expiry}
-                          onChange={(e) => setPayment((p) => ({ ...p, expiry: formatExpiry(e.target.value) }))}
+                          onChange={(e) => {
+                            setPayment((p) => ({ ...p, expiry: formatExpiry(e.target.value) }));
+                            if (paymentErrors.expiry) setPaymentErrors((p) => ({ ...p, expiry: undefined }));
+                          }}
                           maxLength={5}
+                          required
                         />
+                        {paymentErrors.expiry && <span className="co-field__error">{paymentErrors.expiry}</span>}
                       </div>
                       <div className="co-field">
                         <label className="co-field__label">CVV</label>
                         <input
-                          className="co-field__input co-field__input--mono"
+                          className={`co-field__input co-field__input--mono ${paymentErrors.cvv ? "co-field__input--error" : ""}`}
                           name="cvv"
                           placeholder="•••"
                           value={payment.cvv}
-                          onChange={(e) => setPayment((p) => ({ ...p, cvv: e.target.value.replace(/\D/g,"").slice(0,4) }))}
+                          onChange={(e) => {
+                            setPayment((p) => ({ ...p, cvv: e.target.value.replace(/\D/g,"").slice(0,4) }));
+                            if (paymentErrors.cvv) setPaymentErrors((p) => ({ ...p, cvv: undefined }));
+                          }}
                           maxLength={4}
+                          required
                         />
+                        {paymentErrors.cvv && <span className="co-field__error">{paymentErrors.cvv}</span>}
                       </div>
                     </div>
                   </>
@@ -328,7 +525,7 @@ export default function Checkout() {
               </div>
               <div className="co-nav">
                 <button className="co-btn co-btn--ghost" onClick={() => setStep(0)}>← Back</button>
-                <button className="co-btn co-btn--primary" onClick={() => setStep(2)}>Review Order →</button>
+                <button className="co-btn co-btn--primary" onClick={handleContinueToReview}>Review Order →</button>
               </div>
             </div>
           )}
