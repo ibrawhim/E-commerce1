@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "../context/useCart";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../config/api.js";
+import { getAddress, createAddress } from "../config/address.js";
 import "./Checkout.css";
 
 const STEPS = ["Shipping", "Payment", "Review"];
@@ -60,6 +61,67 @@ export default function Checkout() {
 
   const [shippingErrors, setShippingErrors] = useState({});
 
+  // Saved-address tracking: whether the user already has an address on the
+  // backend (POST vs PATCH), whether the loaded one has since been edited
+  // (so we know whether a PATCH is actually needed), and load state.
+  const [hasSavedAddress, setHasSavedAddress] = useState(false);
+  const [addressDirty, setAddressDirty] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(true);
+  const [addressLoadError, setAddressLoadError] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setAddressLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchAddress() {
+      setAddressLoading(true);
+      setAddressLoadError("");
+      try {
+        const address = await getAddress();
+        if (cancelled) return;
+
+        if (address) {
+          setShipping((prev) => ({
+            ...prev,
+            firstName: address.firstName || "",
+            lastName:  address.lastName  || "",
+            email:     address.email     || "",
+            phone:     address.phone     || "",
+            address:   address.address   || "",
+            city:      address.city      || "",
+            state:     address.state     || "",
+            zip:       address.zip       || "",
+            country:   address.country   || prev.country,
+          }));
+          setHasSavedAddress(true);
+          setAddressDirty(false);
+        } else {
+          setHasSavedAddress(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setAddressLoadError(
+            err.response?.data?.message ||
+            err.response?.data?.msg ||
+            "Couldn't load your saved address — you can still fill it in below."
+          );
+        }
+      } finally {
+        if (!cancelled) setAddressLoading(false);
+      }
+    }
+
+    fetchAddress();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [payment, setPayment] = useState({
     method: "card",
     cardName: "", cardNumber: "", expiry: "", cvv: "",
@@ -76,6 +138,7 @@ export default function Checkout() {
   function handleShippingChange(e) {
     const { name, value } = e.target;
     setShipping((p) => ({ ...p, [name]: value }));
+    setAddressDirty(true);
     if (shippingErrors[name]) {
       setShippingErrors((p) => ({ ...p, [name]: undefined }));
     }
@@ -172,6 +235,47 @@ export default function Checkout() {
   const [orderError, setOrderError]   = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
 
+  // Ensures the address is saved on the backend before payment starts.
+  // Always saves via POST (see note below on why PATCH is avoided here).
+  // Returns true if the address is confirmed saved, false if it failed
+  // (in which case handlePlaceOrder should stop and show the error).
+  async function ensureAddressSaved() {
+    const addressPayload = {
+      firstName: shipping.firstName,
+      lastName:  shipping.lastName,
+      email:     shipping.email,
+      phone:     shipping.phone,
+      country:   shipping.country,
+      state:     shipping.state,
+      city:      shipping.city,
+      address:   shipping.address,
+      zip:       shipping.zip,
+    };
+
+    // Already saved and nothing's changed since — no need to call again.
+    if (hasSavedAddress && !addressDirty) {
+      return true;
+    }
+
+    try {
+      // Using POST here regardless of whether an address already exists —
+      // PATCH isn't behaving reliably on the backend yet, so we save via
+      // POST until there's a dedicated "update address" flow that calls
+      // PATCH explicitly.
+      await createAddress(addressPayload);
+      setHasSavedAddress(true);
+      setAddressDirty(false);
+      return true;
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.msg ||
+        "Failed to save your delivery address. Please check the details and try again.";
+      setOrderError(message);
+      return false;
+    }
+  }
+
   async function handlePlaceOrder() {
     setOrderError("");
     setOrderLoading(true);
@@ -180,6 +284,12 @@ export default function Checkout() {
 
     if (!token) {
       setOrderError("You must be signed in to place an order. Please sign in and try again.");
+      setOrderLoading(false);
+      return;
+    }
+
+    const addressSaved = await ensureAddressSaved();
+    if (!addressSaved) {
       setOrderLoading(false);
       return;
     }
@@ -194,18 +304,8 @@ export default function Checkout() {
       console.log("Payment initialize response:", response.data);
 
       if (response.data?.success && response.data?.authorization_url) {
-        const shippingAddress = {
-          firstName: shipping.firstName,
-          lastName:  shipping.lastName,
-          phone:     shipping.phone,
-          country:   shipping.country,
-          state:     shipping.state,
-          city:      shipping.city,
-          address:   shipping.address,
-        };
-        sessionStorage.setItem("bcommerce-shipping", JSON.stringify(shippingAddress));
-        localStorage.setItem("bcommerce-shipping", JSON.stringify(shippingAddress));
-        console.log("Saved shipping address:", shippingAddress);
+        // The backend now loads the saved address itself when the order is
+        // created — no need to stash it in storage for payment/verify.
         window.location.href = response.data.authorization_url;
       } else {
         const msg =
@@ -270,6 +370,18 @@ export default function Checkout() {
           {step === 0 && (
             <div className="co-section">
               <h2 className="co-section__title">Shipping Information</h2>
+
+              {addressLoading && (
+                <p className="co-section__sub" style={{ marginTop: 0, textTransform: "none", fontSize: "13px" }}>
+                  Loading your saved address...
+                </p>
+              )}
+              {addressLoadError && (
+                <div className="co-order-error" style={{ marginTop: 0, marginBottom: "1rem" }}>
+                  {addressLoadError}
+                </div>
+              )}
+
               <div className="co-form">
                 <div className="co-field-row">
                   <div className="co-field">
@@ -602,7 +714,7 @@ export default function Checkout() {
                   <span className="co-sidebar__item-qty">{item.qty}</span>
                 </div>
                 <span className="co-sidebar__item-name">{item.title}</span>
-                <span className="co-sidebar__item-price">${(item.price * item.qty).toFixed(2)}</span>
+                <span className="co-sidebar__item-price">${(item.qty * item.price).toFixed(2)}</span>
               </div>
             ))}
           </div>

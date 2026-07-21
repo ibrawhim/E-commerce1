@@ -1,0 +1,213 @@
+.myorders-root {
+  min-height: 100vh;
+  background: #FAFAF8;
+  font-family: 'Inter', sans-serif;
+  color: #0F1A0F;
+}
+
+.myorders-header {
+  border-bottom: 1px solid #D8EBE0;
+  background: #FFFFFF;
+}
+
+.myorders-header__inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.myorders-header__title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 500;
+  margin: 0 0 4px;
+  letter-spacing: -0.3px;
+}
+
+.myorders-header__count {
+  font-size: 13px;
+  color: #7A9A82;
+  margin: 0;
+}
+
+.myorders-list {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.myorders-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #FFFFFF;
+  border: 1px solid #D8EBE0;
+  border-radius: 10px;
+  padding: 16px 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.myorders-card:hover {
+  border-color: #1A6B3C;
+  box-shadow: 0 4px 20px rgba(26,107,60,0.08);
+}
+
+.myorders-card__img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #E8F5EE;
+  border: 1px solid #D8EBE0;
+  flex-shrink: 0;
+}
+
+.myorders-card__body { flex: 1; min-width: 0; }
+
+.myorders-card__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.myorders-card__id {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
+  color: #0F1A0F;
+}
+
+.myorders-card__date {
+  font-size: 12px;
+  color: #7A9A82;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.myorders-card__items {
+  font-size: 13px;
+  color: #4A6A52;
+  margin: 0 0 8px;
+}
+
+.myorders-card__pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.myorders-pill {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.2px;
+  text-transform: capitalize;
+  background: #F5FAF7;
+  border: 0.5px solid #D8EBE0;
+  color: #4A6A52;
+}
+
+.myorders-pill--paid,
+.myorders-pill--delivered,
+.myorders-pill--completed {
+  background: rgba(30,138,70,0.08);
+  border-color: rgba(30,138,70,0.25);
+  color: #1E8A46;
+}
+
+.myorders-pill--pending,
+.myorders-pill--processing {
+  background: rgba(194,122,32,0.08);
+  border-color: rgba(194,122,32,0.25);
+  color: #C27A20;
+}
+
+.myorders-pill--cancelled,
+.myorders-pill--failed {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #B91C1C;
+}
+
+.myorders-pill--shipped {
+  background: rgba(26,107,60,0.06);
+  border-color: rgba(26,107,60,0.2);
+  color: #1A6B3C;
+}
+
+.myorders-card__chevron { color: #A8C4B0; flex-shrink: 0; }
+
+.myorders-empty {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #FAFAF8;
+  font-family: 'Inter', sans-serif;
+  color: #0F1A0F;
+  padding: 2rem;
+  text-align: center;
+}
+
+.myorders-empty__icon { color: #C8E6D4; margin-bottom: 8px; }
+.myorders-empty__title { font-size: 22px; font-weight: 500; margin: 0; font-family: 'Playfair Display', serif; }
+.myorders-empty__sub { font-size: 14px; color: #7A9A82; margin: 0; }
+
+.myorders-empty__btn {
+  margin-top: 8px;
+  padding: 12px 28px;
+  background: #1A6B3C;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: opacity 0.2s;
+}
+
+.myorders-empty__btn:hover { opacity: 0.85; }
+
+.myorders-fetch-error {
+  font-size: 13px;
+  color: #B91C1C;
+  max-width: 360px;
+}
+
+.myorders-loading-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.myorders-loading-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1A6B3C;
+  animation: myordersPulse 1.4s ease-in-out infinite;
+}
+
+.myorders-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.myorders-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes myordersPulse {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 600px) {
+  .myorders-header__inner { padding: 1.5rem 1rem; }
+  .myorders-list { padding: 1.25rem 1rem 2rem; }
+  .myorders-card { padding: 14px; gap: 12px; }
+  .myorders-card__img { width: 50px; height: 50px; }
+}

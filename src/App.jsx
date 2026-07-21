@@ -10,6 +10,9 @@ import SignUp from "./pages/SignUp";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import PaymentResult from "./pages/PaymentResult";
+import MyOrders from "./pages/MyOrders";
+import OrderDetails from "./pages/OrderDetails";
+import OrderSuccess from "./pages/OrderSuccess";
 
 function App() {
   return (
@@ -22,6 +25,9 @@ function App() {
             <Route path="/cart"            element={<Cart />} />
             <Route path="/checkout"        element={<Checkout />} />
             <Route path="/payment/success" element={<PaymentResult />} />
+            <Route path="/order-success"   element={<OrderSuccess />} />
+            <Route path="/orders"          element={<MyOrders />} />
+            <Route path="/orders/:orderId" element={<OrderDetails />} />
             <Route path="/signin"          element={<SignIn />} />
             <Route path="/signup"          element={<SignUp />} />
           </Routes>
