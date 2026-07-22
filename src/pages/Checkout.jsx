@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useCart } from "../context/useCart";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../config/api.js";
-import { getAddress, createAddress } from "../config/address.js";
+import { getAddress, createAddress, updateAddress } from "../config/address.js";
 import "./Checkout.css";
 
 const STEPS = ["Shipping", "Payment", "Review"];
@@ -236,7 +236,8 @@ export default function Checkout() {
   const [orderLoading, setOrderLoading] = useState(false);
 
   // Ensures the address is saved on the backend before payment starts.
-  // Always saves via POST (see note below on why PATCH is avoided here).
+  // PATCH if an address was already loaded/displayed (existing user),
+  // POST if this is the user's first saved address.
   // Returns true if the address is confirmed saved, false if it failed
   // (in which case handlePlaceOrder should stop and show the error).
   async function ensureAddressSaved() {
@@ -258,12 +259,14 @@ export default function Checkout() {
     }
 
     try {
-      // Using POST here regardless of whether an address already exists —
-      // PATCH isn't behaving reliably on the backend yet, so we save via
-      // POST until there's a dedicated "update address" flow that calls
-      // PATCH explicitly.
-      await createAddress(addressPayload);
-      setHasSavedAddress(true);
+      if (hasSavedAddress) {
+        // An address was already loaded/displayed for this user — update it.
+        await updateAddress(addressPayload);
+      } else {
+        // No existing address — this is their first one.
+        await createAddress(addressPayload);
+        setHasSavedAddress(true);
+      }
       setAddressDirty(false);
       return true;
     } catch (err) {

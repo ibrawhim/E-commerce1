@@ -9,6 +9,13 @@ export const api = axios.create({
   },
 });
 
+
+const PUBLIC_ENDPOINTS = ["/products", "/categories"];
+
+function isPublicEndpoint(url = "") {
+  return PUBLIC_ENDPOINTS.some((path) => url.startsWith(path));
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -32,7 +39,11 @@ api.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("userId");
       localStorage.removeItem("bcommerce-user");
-      window.location.href = "/signin";
+
+      const requestUrl = error.config?.url || "";
+      if (!isPublicEndpoint(requestUrl)) {
+        window.location.href = "/signin";
+      }
     }
 
     return Promise.reject(error);

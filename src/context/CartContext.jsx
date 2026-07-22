@@ -3,10 +3,32 @@ import { api } from "../config/api.js";
 
 export const CartContext = createContext(null);
 
+const GUEST_CART_STORAGE_KEY = "bcommerce-guest-cart";
+
+function loadStoredItems() {
+  try {
+    const stored = localStorage.getItem(GUEST_CART_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function CartProvider({ children }) {
-  const [items, setItems]               = useState([]);
+  // Guest cart — now initialized from localStorage so it survives a full
+  // page reload, including the redirect out to Paystack and back during
+  // checkout (which otherwise wiped it regardless of payment outcome).
+  const [items, setItems]               = useState(loadStoredItems);
   const [backendItems, setBackendItems] = useState([]);
   const [cartSynced, setCartSynced]     = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(GUEST_CART_STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      // Storage full/unavailable — cart just won't survive a reload.
+    }
+  }, [items]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -102,6 +124,11 @@ export function CartProvider({ children }) {
     setItems([]);
     setBackendItems([]);
     setCartSynced(false);
+    try {
+      localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
   }
 
   const totalItems = cartSynced ? backendItems.length : items.length;
