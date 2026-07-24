@@ -9,7 +9,13 @@ export const api = axios.create({
   },
 });
 
-
+// Endpoints that power the public landing page (product browsing) and
+// should work whether or not the user is signed in. If a stored token has
+// expired and one of these calls comes back unauthorized, we still clear
+// the stale token so the UI reflects "logged out" — but we don't yank the
+// person away from the page they're browsing. Any other endpoint (cart,
+// orders, checkout, etc.) still redirects to /signin as before.
+// TODO: confirm/adjust this list against the real endpoints Products.jsx calls.
 const PUBLIC_ENDPOINTS = ["/products", "/categories"];
 
 function isPublicEndpoint(url = "") {
@@ -40,8 +46,13 @@ api.interceptors.response.use(
       localStorage.removeItem("userId");
       localStorage.removeItem("bcommerce-user");
 
+      // Some requests (e.g. the background cart sync on mount) are
+      // best-effort and shouldn't yank the user off whatever page
+      // they're on just because a stale token failed silently.
+      const skipRedirect = error.config?.skipAuthRedirect;
       const requestUrl = error.config?.url || "";
-      if (!isPublicEndpoint(requestUrl)) {
+
+      if (!skipRedirect && !isPublicEndpoint(requestUrl)) {
         window.location.href = "/signin";
       }
     }

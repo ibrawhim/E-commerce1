@@ -35,7 +35,10 @@ export function CartProvider({ children }) {
     if (!token) return;
 
     api
-      .get("/cart/", { headers: { Authorization: `Bearer ${token}` } })
+      .get("/cart/", {
+        headers: { Authorization: `Bearer ${token}` },
+        skipAuthRedirect: true,
+      })
       .then((response) => {
         if (response.data?.success === false) return;
         const raw = response.data?.cart?.cartItems || [];
