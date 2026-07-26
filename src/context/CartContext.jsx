@@ -21,6 +21,13 @@ export function CartProvider({ children }) {
   const [items, setItems]               = useState(loadStoredItems);
   const [backendItems, setBackendItems] = useState([]);
   const [cartSynced, setCartSynced]     = useState(false);
+  // True while the backend cart fetch is in flight. Only true if we're
+  // actually about to fetch (i.e. a token exists) — guest users have
+  // nothing to wait on. Pages should treat cartLoading as "don't know
+  // yet" and NOT show an empty-cart state while it's true, otherwise a
+  // synced cart with items in it flashes as empty before the fetch
+  // resolves (or, on Checkout, bounces the user to the empty-cart screen).
+  const [cartLoading, setCartLoading] = useState(!!localStorage.getItem("token"));
 
   useEffect(() => {
     try {
@@ -32,7 +39,10 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      setCartLoading(false);
+      return;
+    }
 
     api
       .get("/cart/", {
@@ -59,7 +69,8 @@ export function CartProvider({ children }) {
         setBackendItems(mapped);
         setCartSynced(true);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setCartLoading(false));
   }, []);
 
   function addToCart(product, qty = 1) {
@@ -146,6 +157,7 @@ export function CartProvider({ children }) {
       syncBackendItem, updateBackendQty, removeBackendItem,
       clearCart,
       totalItems, subtotal,
+      cartLoading,
     }}>
       {children}
     </CartContext.Provider>

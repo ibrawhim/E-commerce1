@@ -49,10 +49,19 @@ function StepIndicator({ step }) {
 }
 
 export default function Checkout() {
-  const { items, subtotal, totalItems, clearCart } = useCart();
+  const { items, backendItems, cartSynced, cartLoading, totalItems, clearCart } = useCart();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [ordered, setOrdered] = useState(false);
+
+  // Match Cart.jsx's logic: a logged-in user's real cart may live in
+  // backendItems (synced from their account) rather than the local guest
+  // `items` array. Checkout was only ever reading `items`, so a synced
+  // cart with 0 guest items looked "empty" mid-flow even with a product
+  // in it — this was the actual cause of checkout bouncing to the
+  // empty-cart screen partway through.
+  const displayItems = cartSynced && backendItems.length > 0 ? backendItems : items;
+  const subtotal = displayItems.reduce((s, i) => s + i.price * i.qty, 0);
 
   const [shipping, setShipping] = useState({
     firstName: "", lastName: "", email: "", phone: "",
@@ -331,7 +340,16 @@ export default function Checkout() {
     }
   }
 
-  if (items.length === 0 && !ordered) {
+  if (cartLoading) {
+    return (
+      <div className="co-empty">
+        <div className="cart-loading-dots"><span /><span /><span /></div>
+        <p>Loading your cart...</p>
+      </div>
+    );
+  }
+
+  if (displayItems.length === 0 && !ordered) {
     return (
       <div className="co-empty">
         <p>Your cart is empty.</p>
@@ -672,7 +690,7 @@ export default function Checkout() {
               </div>
 
               <div className="co-review-items">
-                {items.map((item) => (
+                {displayItems.map((item) => (
                   <div key={item.id} className="co-review-item">
                     <img src={item.thumbnail} alt={item.title} className="co-review-item__img" />
                     <div className="co-review-item__info">
@@ -710,7 +728,7 @@ export default function Checkout() {
         <div className="co-sidebar">
           <h2 className="co-sidebar__title">Order Summary</h2>
           <div className="co-sidebar__items">
-            {items.map((item) => (
+            {displayItems.map((item) => (
               <div key={item.id} className="co-sidebar__item">
                 <div className="co-sidebar__item-img-wrap">
                   <img src={item.thumbnail} alt={item.title} />

@@ -9,7 +9,7 @@ export default function Cart() {
   const {
     items, removeFromCart, updateQty, addToCart,
     backendItems, setBackendItems, updateBackendQty, removeBackendItem,
-    cartSynced, clearCart,
+    cartSynced, cartLoading, clearCart,
   } = useCart();
 
   const { isLoggedIn } = useAuth();
@@ -102,6 +102,15 @@ export default function Cart() {
 
   function handleApplyCoupon() {
     if (coupon.trim().toLowerCase() === "save10") setCouponApplied(true);
+  }
+
+  if (cartLoading) {
+    return (
+      <div className="cart-empty">
+        <div className="cart-loading-dots"><span /><span /><span /></div>
+        <p className="cart-empty__sub">Loading your cart...</p>
+      </div>
+    );
   }
 
   if (displayItems.length === 0) {
