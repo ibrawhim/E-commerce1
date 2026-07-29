@@ -18,7 +18,7 @@ export default function Cart() {
   const [coupon, setCoupon]               = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
 
-  const displayItems    = cartSynced && backendItems.length > 0 ? backendItems : items;
+  const displayItems    = cartSynced ? backendItems : items;
   const displaySubtotal = displayItems.reduce((s, i) => s + i.price * i.qty, 0);
   const displayCount    = displayItems.length;
 

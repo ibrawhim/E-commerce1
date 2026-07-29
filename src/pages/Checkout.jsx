@@ -60,7 +60,7 @@ export default function Checkout() {
   // cart with 0 guest items looked "empty" mid-flow even with a product
   // in it — this was the actual cause of checkout bouncing to the
   // empty-cart screen partway through.
-  const displayItems = cartSynced && backendItems.length > 0 ? backendItems : items;
+  const displayItems = cartSynced ? backendItems : items;
   const subtotal = displayItems.reduce((s, i) => s + i.price * i.qty, 0);
 
   const [shipping, setShipping] = useState({

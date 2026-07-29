@@ -162,4 +162,4 @@ export function CartProvider({ children }) {
       {children}
     </CartContext.Provider>
   );
-}
+}  
