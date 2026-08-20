@@ -8,7 +8,17 @@ function getHeaders() {
 // GET /address — the user's one saved address, or null if they've never saved one
 export async function getAddress() {
   const response = await api.get("/address", { headers: getHeaders() });
-  return response.data?.address ?? response.data ?? null;
+  const data = response.data;
+
+  // If the backend wraps the address (e.g. { success: true, address: null }),
+  // trust that field as-is — including when it's explicitly null — rather
+  // than falling back to the wrapper object itself, which is truthy and
+  // was being mistaken for a real saved address.
+  if (data && typeof data === "object" && "address" in data) {
+    return data.address ?? null;
+  }
+
+  return data ?? null;
 }
 
 // POST /address — create the user's first saved address
