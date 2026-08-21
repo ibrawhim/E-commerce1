@@ -40,13 +40,26 @@ export default function SignUp() {
     values, errors, touched,
     showPassword, setShowPassword,
     handleChange, handleBlur,
-    passwordRules, showRules,
+    passwordRules, passwordValid,
     isFormValid, getPayload, reset,
   } = useSignUpForm();
 
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState("");
+
+  function getHintMessage() {
+    if (!values.firstName.trim() || !values.lastName.trim()) {
+      return "Please fill in your first and last name.";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
+      return "Please enter a valid email address.";
+    }
+    if (!passwordValid) {
+      return "Password must meet all 3 requirements above.";
+    }
+    return "Please complete all fields to continue.";
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -133,13 +146,14 @@ export default function SignUp() {
             <span />
           </div>
 
-          <form className="auth-form" onSubmit={handleSubmit} noValidate>
+          <form className="auth-form" onSubmit={handleSubmit} noValidate autoComplete="off">
             <div className="auth-field-row">
               <div className="auth-field">
                 <label className="auth-field__label">First name</label>
                 <input
                   type="text"
                   name="firstName"
+                  autoComplete="given-name"
                   className={`auth-field__input ${touched.firstName && errors.firstName ? "auth-field__input--error" : ""}`}
                   placeholder="Ibrahim"
                   value={values.firstName}
@@ -155,6 +169,7 @@ export default function SignUp() {
                 <input
                   type="text"
                   name="lastName"
+                  autoComplete="family-name"
                   className={`auth-field__input ${touched.lastName && errors.lastName ? "auth-field__input--error" : ""}`}
                   placeholder="Yusuf"
                   value={values.lastName}
@@ -172,6 +187,7 @@ export default function SignUp() {
               <input
                 type="email"
                 name="email"
+                autoComplete="email"
                 className={`auth-field__input ${touched.email && errors.email ? "auth-field__input--error" : ""}`}
                 placeholder="you@example.com"
                 value={values.email}
@@ -189,6 +205,7 @@ export default function SignUp() {
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
+                  autoComplete="new-password"
                   className={`auth-field__input auth-field__input--has-icon ${touched.password && errors.password ? "auth-field__input--error" : ""}`}
                   placeholder="Min. 8 characters"
                   value={values.password}
@@ -230,15 +247,7 @@ export default function SignUp() {
             {success && <p className="auth-success">{success}</p>}
 
             {!isFormValid && (
-              <p className="auth-submit-hint">
-                {!values.firstName.trim() || !values.lastName.trim()
-                  ? "Please fill in your first and last name."
-                  : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)
-                  ? "Please enter a valid email address."
-                  : !passwordValid
-                  ? "Password must meet all 3 requirements above."
-                  : "Please complete all fields to continue."}
-              </p>
+              <p className="auth-submit-hint">{getHintMessage()}</p>
             )}
 
             <button
