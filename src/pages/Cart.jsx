@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useCart } from "../context/useCart";
 import { useAuth } from "../context/useAuth";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,7 +10,7 @@ export default function Cart() {
   const {
     items, removeFromCart, updateQty, addToCart,
     backendItems, setBackendItems, updateBackendQty, removeBackendItem,
-    cartSynced, cartLoading, clearCart,
+    cartSynced, cartLoading, clearCart, refetchCart,
   } = useCart();
 
   const { isLoggedIn } = useAuth();
@@ -17,6 +18,10 @@ export default function Cart() {
 
   const [coupon, setCoupon]               = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
+
+  useEffect(() => {
+    if (isLoggedIn) refetchCart();
+  }, [isLoggedIn]);
 
   const displayItems    = cartSynced ? backendItems : items;
   const displaySubtotal = displayItems.reduce((s, i) => s + i.price * i.qty, 0);
@@ -87,11 +92,8 @@ export default function Cart() {
 
   async function handleClearCart() {
     clearCart();
-
     if (!isLoggedIn) return;
-
     console.log("Clearing cart...");
-
     try {
       const response = await api.delete("/cart/clear/", { headers: getHeaders() });
       console.log("Clear cart response:", response.data);
@@ -183,23 +185,17 @@ export default function Cart() {
                     className="cart-qty__btn"
                     onClick={() => handleQty(item, item.qty - 1)}
                     disabled={item.qty <= 1}
-                  >
-                    −
-                  </button>
+                  >−</button>
                   <span className="cart-qty__val">{item.qty}</span>
                   <button
                     className="cart-qty__btn"
                     onClick={() => handleQty(item, item.qty + 1)}
-                  >
-                    +
-                  </button>
+                  >+</button>
                 </div>
               </div>
 
               <div className="cart-col cart-col--sub">
-                <span className="cart-row__sub">
-                  ${(item.price * item.qty).toFixed(2)}
-                </span>
+                <span className="cart-row__sub">${(item.price * item.qty).toFixed(2)}</span>
               </div>
 
               <div className="cart-col cart-col--del">
@@ -285,17 +281,11 @@ export default function Cart() {
             </div>
           </div>
 
-          <button
-            className="cart-summary__checkout-btn"
-            onClick={() => navigate("/checkout")}
-          >
+          <button className="cart-summary__checkout-btn" onClick={() => navigate("/checkout")}>
             Proceed to Checkout →
           </button>
 
-          <button
-            className="cart-summary__clear-btn"
-            onClick={handleClearCart}
-          >
+          <button className="cart-summary__clear-btn" onClick={handleClearCart}>
             Clear Cart
           </button>
 

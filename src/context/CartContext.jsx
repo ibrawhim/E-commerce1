@@ -1,77 +1,70 @@
-import { createContext, useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { CartContext } from "./CartContextInstance";
 import { api } from "../config/api.js";
 
-export const CartContext = createContext(null);
-
-const GUEST_CART_STORAGE_KEY = "bcommerce-guest-cart";
+const GUEST_CART_KEY = "bcommerce-guest-cart";
 
 function loadStoredItems() {
   try {
-    const stored = localStorage.getItem(GUEST_CART_STORAGE_KEY);
+    const stored = localStorage.getItem(GUEST_CART_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
   }
 }
 
+function fetchCart(setBackendItems, setCartSynced, setCartLoading) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    setCartLoading(false);
+    return;
+  }
+  setCartLoading(true);
+  api
+    .get("/cart/", { headers: { Authorization: `Bearer ${token}` } })
+    .then((response) => {
+      if (response.data?.success === false) return;
+      const raw    = response.data?.cart?.cartItems || [];
+      const mapped = raw.map((item) => ({
+        id:          item._id,
+        itemId:      item.itemId,
+        title:       item.title,
+        description: item.description,
+        category:    item.category,
+        brand:       item.brand,
+        weight:      item.weight,
+        price:       item.price,
+        thumbnail:   item.image,
+        qty:         item.quantity,
+        sku:         item.itemId,
+        stock:       999,
+      }));
+      setBackendItems(mapped);
+      setCartSynced(true);
+    })
+    .catch(() => {})
+    .finally(() => setCartLoading(false));
+}
+
 export function CartProvider({ children }) {
-  // Guest cart — now initialized from localStorage so it survives a full
-  // page reload, including the redirect out to Paystack and back during
-  // checkout (which otherwise wiped it regardless of payment outcome).
   const [items, setItems]               = useState(loadStoredItems);
   const [backendItems, setBackendItems] = useState([]);
   const [cartSynced, setCartSynced]     = useState(false);
-  // True while the backend cart fetch is in flight. Only true if we're
-  // actually about to fetch (i.e. a token exists) — guest users have
-  // nothing to wait on. Pages should treat cartLoading as "don't know
-  // yet" and NOT show an empty-cart state while it's true, otherwise a
-  // synced cart with items in it flashes as empty before the fetch
-  // resolves (or, on Checkout, bounces the user to the empty-cart screen).
-  const [cartLoading, setCartLoading] = useState(!!localStorage.getItem("token"));
+  const [cartLoading, setCartLoading]   = useState(!!localStorage.getItem("token"));
 
   useEffect(() => {
     try {
-      localStorage.setItem(GUEST_CART_STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // Storage full/unavailable — cart just won't survive a reload.
-    }
+      localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+    } catch {}
   }, [items]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setCartLoading(false);
-      return;
-    }
-
-    api
-      .get("/cart/", {
-        headers: { Authorization: `Bearer ${token}` },
-        skipAuthRedirect: true,
-      })
-      .then((response) => {
-        if (response.data?.success === false) return;
-        const raw = response.data?.cart?.cartItems || [];
-        const mapped = raw.map((item) => ({
-          id:          item._id,
-          itemId:      item.itemId,
-          title:       item.title,
-          description: item.description,
-          category:    item.category,
-          brand:       item.brand,
-          weight:      item.weight,
-          price:       item.price,
-          thumbnail:   item.image,
-          qty:         item.quantity,
-          sku:         item.itemId,
-          stock:       999,
-        }));
-        setBackendItems(mapped);
-        setCartSynced(true);
-      })
-      .catch(() => {})
-      .finally(() => setCartLoading(false));
+    fetchCart(setBackendItems, setCartSynced, setCartLoading);
   }, []);
+
+  function refetchCart() {
+    fetchCart(setBackendItems, setCartSynced, setCartLoading);
+  }
 
   function addToCart(product, qty = 1) {
     setItems((prev) => {
@@ -138,11 +131,7 @@ export function CartProvider({ children }) {
     setItems([]);
     setBackendItems([]);
     setCartSynced(false);
-    try {
-      localStorage.removeItem(GUEST_CART_STORAGE_KEY);
-    } catch {
-      // ignore
-    }
+    try { localStorage.removeItem(GUEST_CART_KEY); } catch {}
   }
 
   const totalItems = cartSynced ? backendItems.length : items.length;
@@ -153,13 +142,14 @@ export function CartProvider({ children }) {
       items, setItems,
       backendItems, setBackendItems,
       cartSynced, setCartSynced,
+      cartLoading,
+      refetchCart,
       addToCart, removeFromCart, updateQty,
       syncBackendItem, updateBackendQty, removeBackendItem,
       clearCart,
       totalItems, subtotal,
-      cartLoading,
     }}>
       {children}
     </CartContext.Provider>
   );
-}  
+}
