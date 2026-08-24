@@ -380,6 +380,13 @@
   .auth-right { padding: 2rem 1rem; }
   .auth-card { padding: 2rem 1.5rem; }
   .auth-left::before, .auth-left::after { display: none; }
+
+  /* Mobile browsers auto-zoom the page when a focused input's font-size
+     is under 16px. That zoom then sticks after blur, making the page
+     feel "stuck" until the user manually pinches back out. */
+  .auth-field__input {
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -388,6 +395,13 @@
   .auth-field-row { grid-template-columns: 1fr; }
   .auth-left__stat-row { flex-wrap: wrap; gap: 1rem; }
   .auth-left__stat { border: none !important; padding: 0; margin: 0; flex: 0 0 calc(50% - 0.5rem); }
+
+  /* Mobile browsers auto-zoom the page when a focused input's font-size
+     is under 16px. That zoom then sticks after blur, making the page
+     feel "stuck" until the user manually pinches back out. */
+  .auth-field__input {
+    font-size: 16px;
+  }
 }
 
 .auth-field__input-wrap {

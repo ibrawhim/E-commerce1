@@ -19,7 +19,7 @@
 .ps-spinner {
   width: 48px;
   height: 48px;
-  border: 3px solid #D8EBE0;
+  border: 3px solid var(--border-color, #D8EBE0);
   border-top-color: #1A6B3C;
   border-radius: 50%;
   animation: psSpin 0.8s linear infinite;
@@ -206,7 +206,7 @@
   height: 36px;
   border-radius: 50%;
   background: var(--bg-card, #FFFFFF);
-  border: 1.5px solid #D8EBE0;
+  border: 1.5px solid var(--border-color, #D8EBE0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -257,14 +257,14 @@
 
 .ps-btn--ghost {
   background: transparent;
-  border: 1px solid #D8EBE0;
-  color: #4A6A52;
+  border: 1px solid var(--border-color, #D8EBE0);
+  color: var(--text-secondary, #4A6A52);
 }
 
 .ps-btn--ghost:hover {
   border-color: #1A6B3C;
   color: #1A6B3C;
-  background: #E8F5EE;
+  background: var(--bg-surface, #E8F5EE);
 }
 
 @media (max-width: 480px) {

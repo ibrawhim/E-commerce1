@@ -122,7 +122,7 @@ export default function SignIn() {
               <input
                 type="email"
                 name="email"
-                className="auth-field__input test-base"
+                className="auth-field__input"
                 placeholder="you@example.com"
                 value={formData.email}
                 onChange={handleChange}
@@ -139,7 +139,7 @@ export default function SignIn() {
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
-                  className="auth-field__input auth-field__input--has-icon test-base"
+                  className="auth-field__input auth-field__input--has-icon"
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}

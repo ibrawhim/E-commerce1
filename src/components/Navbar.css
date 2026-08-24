@@ -237,8 +237,9 @@
   width: 46px;
   height: 26px;
   border-radius: 13px;
-  background: var(--toggle-bg, #D8EBE0);
-  transition: background 0.3s ease;
+  background: #C8DED0;
+  border: 1px solid #A8C4B0;
+  transition: background 0.3s ease, border-color 0.3s ease;
   display: flex;
   align-items: center;
   padding: 0 3px;
@@ -246,7 +247,8 @@
 }
 
 .navbar__theme-track--dark {
-  background: var(--toggle-bg-active, #1A6B3C);
+  background: #1A6B3C;
+  border-color: #1A6B3C;
   justify-content: flex-end;
 }
 
@@ -254,19 +256,38 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--toggle-thumb, #FFFFFF);
+  background: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-  color: var(--toggle-icon-light, #1A6B3C);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  color: #1A6B3C;
   flex-shrink: 0;
 }
 
 .navbar__theme-track--dark .navbar__theme-thumb {
-  color: var(--toggle-icon-dark, #FFFFFF);
   background: #0C1410;
+  color: #3DD68C;
+}
+
+/* The page itself is dark here, so the toggle needs its own dark-mode
+   palette rather than relying on the (previously undefined) --toggle-*
+   custom properties, which were rendering on fallback values only and
+   blending into the surrounding navbar. */
+[data-theme="dark"] .navbar__theme-track {
+  background: #1E3828;
+  border-color: #2C4A38;
+}
+
+[data-theme="dark"] .navbar__theme-track--dark {
+  background: #3DD68C;
+  border-color: #3DD68C;
+}
+
+[data-theme="dark"] .navbar__theme-track--dark .navbar__theme-thumb {
+  background: #0C1410;
+  color: #3DD68C;
 }
 
 .navbar__user {
