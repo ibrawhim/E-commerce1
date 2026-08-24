@@ -154,7 +154,7 @@ export default function SignUp() {
                   type="text"
                   name="firstName"
                   autoComplete="given-name"
-                  className={`auth-field__input ${touched.firstName && errors.firstName ? "auth-field__input--error" : ""}`}
+                  className={`auth-field__input test-base ${touched.firstName && errors.firstName ? "auth-field__input--error" : ""}`}
                   placeholder="Ibrahim"
                   value={values.firstName}
                   onChange={handleChange}
@@ -170,7 +170,7 @@ export default function SignUp() {
                   type="text"
                   name="lastName"
                   autoComplete="family-name"
-                  className={`auth-field__input ${touched.lastName && errors.lastName ? "auth-field__input--error" : ""}`}
+                  className={`auth-field__input test-base ${touched.lastName && errors.lastName ? "auth-field__input--error" : ""}`}
                   placeholder="Yusuf"
                   value={values.lastName}
                   onChange={handleChange}
@@ -188,7 +188,7 @@ export default function SignUp() {
                 type="email"
                 name="email"
                 autoComplete="email"
-                className={`auth-field__input ${touched.email && errors.email ? "auth-field__input--error" : ""}`}
+                className={`auth-field__input test-base ${touched.email && errors.email ? "auth-field__input--error" : ""}`}
                 placeholder="you@example.com"
                 value={values.email}
                 onChange={handleChange}
@@ -206,7 +206,7 @@ export default function SignUp() {
                   type={showPassword ? "text" : "password"}
                   name="password"
                   autoComplete="new-password"
-                  className={`auth-field__input auth-field__input--has-icon ${touched.password && errors.password ? "auth-field__input--error" : ""}`}
+                  className={`auth-field__input auth-field__input--has-icon test-base ${touched.password && errors.password ? "auth-field__input--error" : ""}`}
                   placeholder="Min. 8 characters"
                   value={values.password}
                   onChange={handleChange}
