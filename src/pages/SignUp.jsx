@@ -42,6 +42,7 @@ export default function SignUp() {
     handleChange, handleBlur,
     passwordRules, passwordValid,
     isFormValid, getPayload, reset,
+    BIO_MAX_LENGTH,
   } = useSignUpForm();
 
   const [loading, setLoading] = useState(false);
@@ -54,6 +55,12 @@ export default function SignUp() {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
       return "Please enter a valid email address.";
+    }
+    if (!/^[+]?[\d\s()-]{7,20}$/.test(values.phone.trim())) {
+      return "Please enter a valid phone number.";
+    }
+    if (values.bio.length > BIO_MAX_LENGTH) {
+      return `Bio must be ${BIO_MAX_LENGTH} characters or fewer.`;
     }
     if (!passwordValid) {
       return "Password must meet all 3 requirements above.";
@@ -196,6 +203,46 @@ export default function SignUp() {
               />
               {touched.email && errors.email && (
                 <span className="auth-field__error">{errors.email}</span>
+              )}
+            </div>
+
+            <div className="auth-field">
+              <label className="auth-field__label">Phone number</label>
+              <input
+                type="tel"
+                name="phone"
+                autoComplete="tel"
+                className={`auth-field__input ${touched.phone && errors.phone ? "auth-field__input--error" : ""}`}
+                placeholder="+1 (555) 000-0000"
+                value={values.phone}
+                onChange={handleChange}
+                onBlur={handleBlur}
+              />
+              {touched.phone && errors.phone && (
+                <span className="auth-field__error">{errors.phone}</span>
+              )}
+            </div>
+
+            <div className="auth-field">
+              <div className="auth-field__row">
+                <label className="auth-field__label">Bio (optional)</label>
+                <span className="auth-field__link" style={{ cursor: "default" }}>
+                  {values.bio.length}/{BIO_MAX_LENGTH}
+                </span>
+              </div>
+              <textarea
+                name="bio"
+                rows={3}
+                className={`auth-field__input ${touched.bio && errors.bio ? "auth-field__input--error" : ""}`}
+                style={{ height: "auto", padding: "10px 14px", resize: "vertical" }}
+                placeholder="A little about yourself..."
+                value={values.bio}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                maxLength={BIO_MAX_LENGTH}
+              />
+              {touched.bio && errors.bio && (
+                <span className="auth-field__error">{errors.bio}</span>
               )}
             </div>
 

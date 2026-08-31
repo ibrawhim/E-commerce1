@@ -18,11 +18,16 @@ const RULES = [
   },
 ];
 
+const PHONE_RE = /^[+]?[\d\s()-]{7,20}$/;
+const BIO_MAX_LENGTH = 300;
+
 export function useSignUpForm() {
   const [values, setValues] = useState({
     firstName: "",
     lastName:  "",
     email:     "",
+    phone:     "",
+    bio:       "",
     password:  "",
   });
 
@@ -56,6 +61,13 @@ export function useSignUpForm() {
     email: touched.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)
       ? "Enter a valid email address"
       : "",
+    phone: touched.phone && !PHONE_RE.test(values.phone.trim())
+      ? "Enter a valid phone number"
+      : "",
+    // bio is optional — only flag it if it's over the length limit
+    bio: touched.bio && values.bio.length > BIO_MAX_LENGTH
+      ? `Bio must be ${BIO_MAX_LENGTH} characters or fewer`
+      : "",
     password: touched.password && !passwordValid
       ? "Password does not meet all requirements"
       : "",
@@ -65,6 +77,8 @@ export function useSignUpForm() {
     values.firstName.trim() &&
     values.lastName.trim()  &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email) &&
+    PHONE_RE.test(values.phone.trim()) &&
+    values.bio.length <= BIO_MAX_LENGTH &&
     passwordValid;
 
   function getPayload() {
@@ -72,12 +86,14 @@ export function useSignUpForm() {
       firstName: values.firstName.trim(),
       lastName:  values.lastName.trim(),
       email:     values.email.trim(),
+      phone:     values.phone.trim(),
+      bio:       values.bio.trim(),
       password:  values.password,
     };
   }
 
   function reset() {
-    setValues({ firstName: "", lastName: "", email: "", password: "" });
+    setValues({ firstName: "", lastName: "", email: "", phone: "", bio: "", password: "" });
     setTouched({});
   }
 
@@ -95,5 +111,6 @@ export function useSignUpForm() {
     isFormValid,
     getPayload,
     reset,
+    BIO_MAX_LENGTH,
   };
 }

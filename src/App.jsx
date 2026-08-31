@@ -13,6 +13,7 @@ import PaymentResult from "./pages/PaymentResult";
 import MyOrders from "./pages/MyOrders";
 import OrderDetails from "./pages/OrderDetails";
 import OrderSuccess from "./pages/OrderSuccess";
+import Profile from "./pages/Profile";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="/order-success"   element={<OrderSuccess />} />
             <Route path="/orders"          element={<MyOrders />} />
             <Route path="/orders/:orderId" element={<OrderDetails />} />
+            <Route path="/profile"         element={<Profile />} />
             <Route path="/signin"          element={<SignIn />} />
             <Route path="/signup"          element={<SignUp />} />
           </Routes>

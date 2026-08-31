@@ -89,9 +89,9 @@ function UserMenu({ user, onLogout }) {
             <p className="navbar__user-dropdown-email">{user.email}</p>
           </div>
           <div className="navbar__user-dropdown-divider" />
-          <Link to="/orders" className="navbar__user-dropdown-item" onClick={() => setOpen(false)}>My Orders</Link>
-          <Link to="/"      className="navbar__user-dropdown-item" onClick={() => setOpen(false)}>Profile</Link>
-          <Link to="/cart"  className="navbar__user-dropdown-item" onClick={() => setOpen(false)}>My Cart</Link>
+          <Link to="/orders"  className="navbar__user-dropdown-item" onClick={() => setOpen(false)}>My Orders</Link>
+          <Link to="/profile" className="navbar__user-dropdown-item" onClick={() => setOpen(false)}>Profile</Link>
+          <Link to="/cart"    className="navbar__user-dropdown-item" onClick={() => setOpen(false)}>My Cart</Link>
           <div className="navbar__user-dropdown-divider" />
           <button
             className="navbar__user-dropdown-item navbar__user-dropdown-item--logout"
