@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { CartContext } from "./CartContextInstance";
 import { api } from "../config/api.js";
 
@@ -13,16 +13,24 @@ function loadStoredItems() {
   }
 }
 
-function fetchCart(setBackendItems, setCartSynced, setCartLoading) {
+function fetchCart(setBackendItems, setCartSynced, setCartLoading, requestIdRef) {
   const token = localStorage.getItem("token");
   if (!token) {
     setCartLoading(false);
     return;
   }
+
   setCartLoading(true);
+  // Tag this request so a clearCart() that happens while it's in flight
+  // can invalidate it — otherwise a slow response can resolve *after*
+  // the cart was cleared and silently overwrite the empty state with
+  // stale pre-clear items.
+  const requestId = ++requestIdRef.current;
+
   api
     .get("/cart/", { headers: { Authorization: `Bearer ${token}` } })
     .then((response) => {
+      if (requestIdRef.current !== requestId) return; // stale — dropped
       if (response.data?.success === false) return;
       const raw    = response.data?.cart?.cartItems || [];
       const mapped = raw.map((item) => ({
@@ -43,7 +51,9 @@ function fetchCart(setBackendItems, setCartSynced, setCartLoading) {
       setCartSynced(true);
     })
     .catch(() => {})
-    .finally(() => setCartLoading(false));
+    .finally(() => {
+      if (requestIdRef.current === requestId) setCartLoading(false);
+    });
 }
 
 export function CartProvider({ children }) {
@@ -52,6 +62,11 @@ export function CartProvider({ children }) {
   const [cartSynced, setCartSynced]     = useState(false);
   const [cartLoading, setCartLoading]   = useState(!!localStorage.getItem("token"));
 
+  // Tracks the most recent cart-fetch "generation". Bumped by clearCart()
+  // so any fetch that was already in flight when the cart got cleared is
+  // recognized as stale and ignored when it eventually resolves.
+  const requestIdRef = useRef(0);
+
   useEffect(() => {
     try {
       localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
@@ -59,11 +74,11 @@ export function CartProvider({ children }) {
   }, [items]);
 
   useEffect(() => {
-    fetchCart(setBackendItems, setCartSynced, setCartLoading);
+    fetchCart(setBackendItems, setCartSynced, setCartLoading, requestIdRef);
   }, []);
 
   function refetchCart() {
-    fetchCart(setBackendItems, setCartSynced, setCartLoading);
+    fetchCart(setBackendItems, setCartSynced, setCartLoading, requestIdRef);
   }
 
   function addToCart(product, qty = 1) {
@@ -128,6 +143,10 @@ export function CartProvider({ children }) {
   }
 
   function clearCart() {
+    // Invalidate any cart fetch that's currently in flight — its result,
+    // if it lands after this, belongs to the pre-clear cart and must not
+    // be allowed to overwrite what we're about to set here.
+    requestIdRef.current++;
     setItems([]);
     setBackendItems([]);
     setCartSynced(false);
