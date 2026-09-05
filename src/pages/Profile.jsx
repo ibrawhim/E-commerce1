@@ -39,6 +39,10 @@ export default function Profile() {
   const [pwSuccess, setPwSuccess]       = useState("");
   const [pwSaving, setPwSaving]         = useState(false);
 
+  const [becomingSeller, setBecomingSeller]         = useState(false);
+  const [becomeSellerError, setBecomeSellerError]   = useState("");
+  const [becomeSellerSuccess, setBecomeSellerSuccess] = useState("");
+
   function getHeaders() {
     const token = localStorage.getItem("token");
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -117,6 +121,50 @@ export default function Profile() {
     }
   }
 
+  async function handleBecomeSeller() {
+    setBecomingSeller(true);
+    setBecomeSellerError("");
+    setBecomeSellerSuccess("");
+
+    try {
+      const res = await api.patch("/become-seller", {}, { headers: getHeaders() });
+      console.log("PATCH /become-seller response:", res.data);
+
+      if (res.data?.success === false) {
+        setBecomeSellerError(res.data?.message || "Could not complete seller registration.");
+        return;
+      }
+
+      const updatedData = res.data?.data || res.data?.profile || res.data;
+      const newToken     = res.data?.token;
+
+      // Merge whatever the backend gives back (at minimum the role should
+      // change) into the current profile rather than assuming a full
+      // profile object comes back.
+      const mergedProfile = updatedData ? { ...profile, ...updatedData } : { ...profile, role: "Seller" };
+      setProfile(mergedProfile);
+
+      if (newToken) {
+        localStorage.setItem("token", newToken);
+        console.log("Token refreshed in localStorage.");
+      }
+
+      login(mergedProfile, newToken || localStorage.getItem("token"));
+      setBecomeSellerSuccess(res.data?.message || "You're now a seller!");
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.msg     ||
+        err.message                 ||
+        "Failed to become a seller. Please try again.";
+      setBecomeSellerError(msg);
+    } finally {
+      setBecomingSeller(false);
+    }
+  }
+
+  const isSeller = (profile?.role || "").toLowerCase() === "seller";
+
   const initials = profile
     ? `${profile.firstName?.[0] ?? ""}${profile.lastName?.[0] ?? ""}`.toUpperCase()
     : "??";
@@ -172,6 +220,35 @@ export default function Profile() {
               <span className="profile-avatar__role">{profile.role}</span>
             )}
             <p className="profile-avatar__since">Member since {memberSince}</p>
+          </div>
+
+          <div className="profile-seller-card">
+            <div className="profile-seller-card__row">
+              <div>
+                <h3 className="profile-seller-card__title">Sell on Bcommerce</h3>
+                <p className="profile-seller-card__desc">
+                  {isSeller
+                    ? "You're registered as a seller on this account."
+                    : "Start listing your own products and reach thousands of shoppers."}
+                </p>
+              </div>
+              <button
+                type="button"
+                className={`profile-seller-toggle ${isSeller ? "profile-seller-toggle--on" : ""}`}
+                role="switch"
+                aria-checked={isSeller}
+                aria-label={isSeller ? "Seller account enabled" : "Become a seller"}
+                onClick={handleBecomeSeller}
+                disabled={isSeller || becomingSeller}
+              >
+                <span className="profile-seller-toggle__thumb">
+                  {becomingSeller && <span className="profile-seller-toggle__spinner" />}
+                </span>
+              </button>
+            </div>
+
+            {becomeSellerError && <p className="profile-error">{becomeSellerError}</p>}
+            {becomeSellerSuccess && <p className="profile-success">{becomeSellerSuccess}</p>}
           </div>
 
           <div className="profile-quick-links">

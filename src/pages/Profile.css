@@ -135,6 +135,85 @@
   margin: 4px 0 0;
 }
 
+.profile-seller-card {
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #D8EBE0);
+  border-radius: 12px;
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-seller-card__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.profile-seller-card__title {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0 0 4px;
+  color: var(--text-primary, #0F1A0F);
+}
+
+.profile-seller-card__desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted, #7A9A82);
+  margin: 0;
+}
+
+.profile-seller-toggle {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 13px;
+  background: #C8DED0;
+  border: 1px solid #A8C4B0;
+  padding: 0 3px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease;
+  flex-shrink: 0;
+}
+
+.profile-seller-toggle--on {
+  background: #1A6B3C;
+  border-color: #1A6B3C;
+  justify-content: flex-end;
+}
+
+.profile-seller-toggle:disabled {
+  cursor: not-allowed;
+}
+
+.profile-seller-toggle__thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.profile-seller-toggle__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #D8EBE0;
+  border-top-color: #1A6B3C;
+  border-radius: 50%;
+  animation: profileSpin 0.6s linear infinite;
+}
+
 .profile-quick-links {
   background: var(--bg-card, #FFFFFF);
   border: 1px solid var(--border-color, #D8EBE0);
