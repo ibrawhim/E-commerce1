@@ -151,8 +151,6 @@ export default function SellerProductForm() {
     
     try {
       const formData = buildProductFormData(form, imageFiles);
-      console.log(formData.getAll("images"))
-
       if (isEditMode) {
         await updateSellerProduct(productId, formData);
       } else {

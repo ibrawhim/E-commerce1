@@ -20,6 +20,44 @@ const DARK = {
   muted:       "#4A7A5A",
 };
 
+const MARKETPLACE_PRODUCTS_URL = "https://e-commerce-backend-clean.vercel.app/marketplace/products";
+
+// Normalizes a real seller-listed product into the same shape the rest of
+// this file already expects (which was built around dummyjson's schema).
+// Marketplace products don't have `rating` or `discountPercentage` at
+// all — StarRating calls `.toFixed(1)` on rating directly, so leaving it
+// undefined would crash the card, hence the explicit fallbacks below.
+function mapMarketplaceProduct(p) {
+  const sellerName = [p.seller?.firstName, p.seller?.lastName].filter(Boolean).join(" ");
+  return {
+    id: p._id,
+    _id: p._id,
+    title: p.title,
+    description: p.description,
+    category: (p.category || "").toLowerCase(),
+    price: p.price,
+    stock: p.stock,
+    brand: p.brand || sellerName,
+    sku: p.sku,
+    weight: p.weight,
+    dimensions: p.dimensions,
+    tags: Array.isArray(p.tags) ? p.tags : [],
+    warrantyInformation: p.warrantyInformation,
+    shippingInformation: p.shippingInformation,
+    availabilityStatus: p.availabilityStatus || (p.stock > 0 ? "In Stock" : "Out of Stock"),
+    returnPolicy: p.returnPolicy,
+    minimumOrderQuantity: p.minimumOrderQuantity || 1,
+    images: Array.isArray(p.images) ? p.images : [],
+    thumbnail: p.thumbnail || p.images?.[0] || "",
+    rating: typeof p.rating === "number" ? p.rating : 0,
+    discountPercentage: typeof p.discountPercentage === "number" ? p.discountPercentage : 0,
+    seller: p.seller,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+    isMarketplaceProduct: true,
+  };
+}
+
 function StarRating({ rating }) {
   return (
     <div className="product-card__stars">
@@ -289,20 +327,43 @@ const Products = () => {
   const gridGap     = isDark ? DARK.border  : theme.borderColor;
 
   useEffect(() => {
-    axios
-      .get("https://dummyjson.com/products?limit=100")
-      .then((res) => {
-        const data = res.data.products;
-        setProducts(data);
-        setFiltered(data);
-        const cats = [...new Set(data.map((p) => p.category))].sort();
-        setCategories(cats);
-        setLoading(false);
-      })
-      .catch(() => {
+    setLoading(true);
+    setError(false);
+
+    Promise.allSettled([
+      axios.get("https://dummyjson.com/products?limit=100"),
+      axios.get(MARKETPLACE_PRODUCTS_URL),
+    ]).then(([dummyResult, marketResult]) => {
+      const dummyData =
+        dummyResult.status === "fulfilled" ? dummyResult.value.data.products : [];
+
+      const marketRaw =
+        marketResult.status === "fulfilled" ? marketResult.value.data?.data || [] : [];
+      const marketData = marketRaw.map(mapMarketplaceProduct);
+
+      if (dummyResult.status === "rejected") {
+        console.error("Failed to load dummyjson products:", dummyResult.reason);
+      }
+      if (marketResult.status === "rejected") {
+        console.error("Failed to load marketplace products:", marketResult.reason);
+      }
+
+      // Real seller-listed products surface first, dummy catalog fills
+      // out the rest. Swap the order below if you'd rather it be reversed.
+      const combined = [...marketData, ...dummyData];
+
+      if (combined.length === 0) {
         setError(true);
         setLoading(false);
-      });
+        return;
+      }
+
+      setProducts(combined);
+      setFiltered(combined);
+      const cats = [...new Set(combined.map((p) => p.category))].filter(Boolean).sort();
+      setCategories(cats);
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
