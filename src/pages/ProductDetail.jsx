@@ -6,6 +6,52 @@ import { useCart } from "../context/useCart";
 import { useAuth } from "../context/useAuth";
 import { api } from "../config/api.js";
 
+const MARKETPLACE_BASE = "https://e-commerce-backend-clean.vercel.app";
+
+// Mongo ObjectIds are always a 24-character hex string; dummyjson's ids
+// are small numbers. That's a reliable enough signal to tell the two
+// product sources apart without changing how Products.jsx passes the id.
+function isMarketplaceId(id) {
+  return typeof id === "string" && /^[a-fA-F0-9]{24}$/.test(id);
+}
+
+// Normalizes a real seller-listed product into the same shape this file
+// already expects (built around dummyjson's schema). Same mapping as
+// Products.jsx's mapMarketplaceProduct — duplicated here since the two
+// files don't currently share a utils module; worth extracting later.
+function mapMarketplaceProduct(p) {
+  const sellerName = [p.seller?.firstName, p.seller?.lastName].filter(Boolean).join(" ");
+  return {
+    id: p._id,
+    _id: p._id,
+    title: p.title,
+    description: p.description,
+    category: (p.category || "").toLowerCase(),
+    price: p.price,
+    stock: p.stock,
+    brand: p.brand || sellerName,
+    sku: p.sku,
+    weight: p.weight,
+    dimensions: p.dimensions || { width: 0, height: 0, depth: 0 },
+    tags: Array.isArray(p.tags) ? p.tags : [],
+    warrantyInformation: p.warrantyInformation,
+    shippingInformation: p.shippingInformation,
+    availabilityStatus: p.availabilityStatus || (p.stock > 0 ? "In Stock" : "Out of Stock"),
+    returnPolicy: p.returnPolicy,
+    minimumOrderQuantity: p.minimumOrderQuantity || 1,
+    images: Array.isArray(p.images) && p.images.length ? p.images : (p.thumbnail ? [p.thumbnail] : []),
+    thumbnail: p.thumbnail || p.images?.[0] || "",
+    rating: typeof p.rating === "number" ? p.rating : 0,
+    discountPercentage: typeof p.discountPercentage === "number" ? p.discountPercentage : 0,
+    reviews: Array.isArray(p.reviews) ? p.reviews : [],
+    meta: p.meta || {},
+    seller: p.seller,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+    isMarketplaceProduct: true,
+  };
+}
+
 function calcOriginalPrice(price, disc) {
   return (price / (1 - disc / 100)).toFixed(2);
 }
@@ -208,23 +254,52 @@ export default function ProductDetail({ productId, onBack, onProductSelect, init
     setActiveTab("description");
     setVisible(false);
 
-    axios
-      .get(`https://dummyjson.com/products/${productId}`)
-      .then((res) => {
-        setProduct(res.data);
-        return axios.get(
-          `https://dummyjson.com/products/category/${res.data.category}?limit=8`
-        );
-      })
-      .then((res) => {
-        setRelated(res.data.products.filter((p) => p.id !== productId));
-        setLoading(false);
-        setTimeout(() => setVisible(true), 30);
-      })
-      .catch(() => {
-        setError(true);
-        setLoading(false);
-      });
+    if (isMarketplaceId(productId)) {
+      axios
+        .get(`${MARKETPLACE_BASE}/marketplace/products`)
+        .then((res) => {
+          const allRaw = res.data?.data || [];
+          const matchRaw = allRaw.find((p) => p._id === productId);
+
+          if (!matchRaw) {
+            setError(true);
+            setLoading(false);
+            return;
+          }
+
+          const mappedProduct = mapMarketplaceProduct(matchRaw);
+          const relatedMapped = allRaw
+            .map(mapMarketplaceProduct)
+            .filter((p) => p.id !== productId && p.category === mappedProduct.category);
+
+          setProduct(mappedProduct);
+          setRelated(relatedMapped);
+          setLoading(false);
+          setTimeout(() => setVisible(true), 30);
+        })
+        .catch(() => {
+          setError(true);
+          setLoading(false);
+        });
+    } else {
+      axios
+        .get(`https://dummyjson.com/products/${productId}`)
+        .then((res) => {
+          setProduct(res.data);
+          return axios.get(
+            `https://dummyjson.com/products/category/${res.data.category}?limit=8`
+          );
+        })
+        .then((res) => {
+          setRelated(res.data.products.filter((p) => p.id !== productId));
+          setLoading(false);
+          setTimeout(() => setVisible(true), 30);
+        })
+        .catch(() => {
+          setError(true);
+          setLoading(false);
+        });
+    }
   }, [productId]);
 
   const loadingTheme = getTheme("all");
