@@ -528,6 +528,76 @@
 }
 
 .co-sidebar__row { display: flex; justify-content: space-between; font-size: 13px; color: #4A6A52; }
+.co-sidebar__row--discount { color: #1E8A46; }
+
+.co-coupon { margin-bottom: 1.25rem; }
+
+.co-coupon__label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #7A9A82;
+  margin-bottom: 8px;
+}
+
+.co-coupon__row { display: flex; gap: 8px; }
+
+.co-coupon__input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  background: #FAFAF8;
+  border: 1px solid #D8EBE0;
+  border-radius: 6px;
+  color: #0F1A0F;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.co-coupon__input:focus { border-color: #1A6B3C; }
+.co-coupon__input::placeholder { color: #A8C4B0; }
+.co-coupon__input--error { border-color: #EF4444; }
+
+.co-coupon__btn,
+.co-coupon__remove {
+  height: 40px;
+  padding: 0 14px;
+  background: #E8F5EE;
+  border: 1px solid #C8E6D4;
+  border-radius: 6px;
+  color: #1A6B3C;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.co-coupon__btn:hover:not(:disabled),
+.co-coupon__remove:hover { background: #1A6B3C; color: #FFFFFF; border-color: #1A6B3C; }
+.co-coupon__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.co-coupon__applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 10px 0 12px;
+  background: #F5FAF7;
+  border: 1px solid #C8E6D4;
+  border-radius: 6px;
+  color: #1E8A46;
+  font-size: 12px;
+}
+
+.co-coupon__remove { height: 28px; padding: 0 9px; font-size: 12px; }
+.co-coupon__error { display: block; margin-top: 6px; color: #B91C1C; font-size: 12px; }
 
 .co-sidebar__total {
   display: flex;

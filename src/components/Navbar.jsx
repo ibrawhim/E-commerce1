@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/useCart";
 import { useTheme } from "../context/useTheme";
 import { useAuth } from "../context/useAuth";
@@ -10,12 +10,13 @@ const NAV_LINKS = [
   { label: "Shop",       to: "/" },
   { label: "Categories", to: "/" },
   { label: "Deals",      to: "/" },
-  { label: "About",      to: "/" },
+  { label: "About",      to: "/about" },
 ];
 
 function ThemeToggle({ isDark, onToggle }) {
   return (
     <button
+      type="button"
       className="navbar__theme-toggle"
       onClick={onToggle}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
@@ -54,8 +55,17 @@ function UserMenu({ user, onLogout }) {
     function handleClick(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     }
+
+    function handleKeyDown(e) {
+      if (e.key === "Escape") setOpen(false);
+    }
+
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const initials = `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase();
@@ -63,9 +73,12 @@ function UserMenu({ user, onLogout }) {
   return (
     <div className="navbar__user" ref={ref}>
       <button
+        type="button"
         className="navbar__user-btn"
         onClick={() => setOpen((o) => !o)}
         aria-label="User menu"
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
         <span className="navbar__user-avatar">{initials}</span>
         <span className="navbar__user-name">{user.firstName}</span>
@@ -83,18 +96,20 @@ function UserMenu({ user, onLogout }) {
       </button>
 
       {open && (
-        <div className="navbar__user-dropdown">
+        <div className="navbar__user-dropdown" role="menu">
           <div className="navbar__user-dropdown-header">
             <p className="navbar__user-dropdown-name">{user.firstName} {user.lastName}</p>
             <p className="navbar__user-dropdown-email">{user.email}</p>
           </div>
           <div className="navbar__user-dropdown-divider" />
-          <Link to="/orders"  className="navbar__user-dropdown-item" onClick={() => setOpen(false)}>My Orders</Link>
-          <Link to="/profile" className="navbar__user-dropdown-item" onClick={() => setOpen(false)}>Profile</Link>
-          <Link to="/cart"    className="navbar__user-dropdown-item" onClick={() => setOpen(false)}>My Cart</Link>
+          <Link to="/orders"  className="navbar__user-dropdown-item" role="menuitem" onClick={() => setOpen(false)}>My Orders</Link>
+          <Link to="/profile" className="navbar__user-dropdown-item" role="menuitem" onClick={() => setOpen(false)}>Profile</Link>
+          <Link to="/cart"    className="navbar__user-dropdown-item" role="menuitem" onClick={() => setOpen(false)}>My Cart</Link>
           <div className="navbar__user-dropdown-divider" />
           <button
+            type="button"
             className="navbar__user-dropdown-item navbar__user-dropdown-item--logout"
+            role="menuitem"
             onClick={() => { setOpen(false); onLogout(); }}
           >
             Sign Out
@@ -111,6 +126,39 @@ export default function Navbar() {
   const { isDark, toggleTheme } = useTheme();
   const { user, isLoggedIn, logout } = useAuth();
   const navigate                = useNavigate();
+  const location                = useLocation();
+  const navRef                  = useRef(null);
+  const hamburgerRef            = useRef(null);
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      document.body.style.overflow = "";
+      hamburgerRef.current?.focus();
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const firstMenuItem = navRef.current?.querySelector("a, button");
+    firstMenuItem?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
 
   function handleLogout() {
     logout();
@@ -125,7 +173,13 @@ export default function Navbar() {
           <span className="navbar__logo-text">commerce</span>
         </Link>
 
-        <nav className={`navbar__nav ${menuOpen ? "navbar__nav--open" : ""}`}>
+        <nav
+          id="primary-navigation"
+          ref={navRef}
+          className={`navbar__nav ${menuOpen ? "navbar__nav--open" : ""}`}
+          aria-label="Primary navigation"
+          aria-hidden={!menuOpen}
+        >
           {NAV_LINKS.map(({ label, to }) => (
             <Link key={label} to={to} className="navbar__link" onClick={() => setMenuOpen(false)}>
               {label}
@@ -144,7 +198,7 @@ export default function Navbar() {
           )}
           {isLoggedIn && (
             <div className="navbar__nav-auth">
-              <button className="navbar__btn navbar__btn--ghost" onClick={() => { setMenuOpen(false); handleLogout(); }}>
+              <button type="button" className="navbar__btn navbar__btn--ghost" onClick={() => { setMenuOpen(false); handleLogout(); }}>
                 Sign Out
               </button>
             </div>
@@ -152,7 +206,7 @@ export default function Navbar() {
         </nav>
 
         <div className="navbar__actions">
-          <button className="navbar__icon-btn" aria-label="Search">
+          <button type="button" className="navbar__icon-btn" aria-label="Search">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
@@ -183,8 +237,12 @@ export default function Navbar() {
           )}
 
           <button
+            type="button"
+            ref={hamburgerRef}
             className={`navbar__hamburger ${menuOpen ? "navbar__hamburger--open" : ""}`}
-            aria-label="Toggle menu"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            aria-controls="primary-navigation"
             onClick={() => setMenuOpen((o) => !o)}
           >
             <span /><span /><span />

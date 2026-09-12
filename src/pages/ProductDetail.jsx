@@ -8,9 +8,7 @@ import { api } from "../config/api.js";
 
 const MARKETPLACE_BASE = "https://e-commerce-backend-clean.vercel.app";
 
-// Mongo ObjectIds are always a 24-character hex string; dummyjson's ids
-// are small numbers. That's a reliable enough signal to tell the two
-// product sources apart without changing how Products.jsx passes the id.
+
 function isMarketplaceId(id) {
   return typeof id === "string" && /^[a-fA-F0-9]{24}$/.test(id);
 }

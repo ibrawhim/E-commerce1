@@ -197,6 +197,8 @@ body {
 .co-steps     { background: var(--bg-card) !important; border-color: var(--border-color) !important; }
 .co-step__circle { background: var(--bg-surface) !important; border-color: var(--border-color) !important; }
 .co-field__input { background: var(--bg-surface) !important; border-color: var(--border-color) !important; color: var(--text-primary) !important; }
+.co-coupon__input { background: var(--bg-surface) !important; border-color: var(--border-color) !important; color: var(--text-primary) !important; }
+.co-coupon__applied { background: var(--bg-surface) !important; border-color: var(--border-color) !important; }
 .co-ship-method { background: var(--bg-surface) !important; border-color: var(--border-color) !important; }
 .co-ship-method__label { color: var(--text-primary) !important; }
 .co-payment-tab { background: var(--bg-surface) !important; border-color: var(--border-color) !important; color: var(--text-secondary) !important; }
