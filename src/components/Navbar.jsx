@@ -7,10 +7,9 @@ import "./Navbar.css";
 
 const NAV_LINKS = [
   { label: "Home",       to: "/" },
-  { label: "Shop",       to: "/" },
-  { label: "Categories", to: "/" },
-  { label: "Deals",      to: "/" },
   { label: "About",      to: "/about" },
+  { label: "FAQ",        to: "/faq" },
+  { label: "Contact Us", to: "/contact" },
 ];
 
 function ThemeToggle({ isDark, onToggle }) {

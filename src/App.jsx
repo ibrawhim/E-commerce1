@@ -17,6 +17,8 @@ import Profile from "./pages/Profile";
 import SellerProducts from "./pages/SellerProducts";
 import SellerProductForm from "./pages/SellerProductForm";
 import About from "./pages/About";
+import FAQ from "./pages/FAQ";
+import Contact from "./pages/Contact";
 
 function App() {
   return (
@@ -34,6 +36,8 @@ function App() {
             <Route path="/orders/:orderId" element={<OrderDetails />} />
             <Route path="/profile"         element={<Profile />} />
             <Route path="/about"            element={<About />} />
+            <Route path="/faq"              element={<FAQ />} />
+            <Route path="/contact"           element={<Contact />} />
             <Route path="/seller/products"                  element={<SellerProducts />} />
             <Route path="/seller/products/new"              element={<SellerProductForm />} />
             <Route path="/seller/products/:productId/edit"  element={<SellerProductForm />} />
